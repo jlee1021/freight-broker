@@ -192,19 +192,17 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="page-title">Dashboard</h1>
-        {/* Phase 2: 기간 선택 */}
         <select
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm"
         >
           {PERIODS.map((p) => (
-            <option key={p.value || 'all'} value={p.value}>
-              {p.label}
-            </option>
+            <option key={p.value || 'all'} value={p.value}>{p.label}</option>
           ))}
         </select>
       </div>
@@ -212,12 +210,9 @@ export default function Dashboard() {
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
           <span className="text-red-800">{error}</span>
-          <button type="button" onClick={load} className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
-            Retry
-          </button>
+          <button type="button" onClick={load} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm">Retry</button>
         </div>
       )}
-
       {loading && !stats && (
         <div className="flex items-center gap-2 text-gray-500">
           <span className="inline-block w-5 h-5 border-2 border-gray-300 border-t-red-600 rounded-full animate-spin" />
@@ -227,303 +222,289 @@ export default function Dashboard() {
 
       {/* Alerts */}
       {stats && ((stats.overdue_invoices_count ?? 0) > 0 || (stats.insurance_expiring_soon_count ?? 0) > 0) && (
-        <div className="card border-l-4 border-amber-500 bg-amber-50/50">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="card border-l-4 border-amber-500 bg-amber-50/50 py-3">
+          <div className="flex items-center gap-2 mb-2">
             <IconAlert />
-            <h2 className="text-lg font-semibold text-gray-800">Alerts</h2>
+            <h2 className="font-semibold text-gray-800">Alerts</h2>
           </div>
-          <ul className="space-y-2">
+          <ul className="space-y-1.5">
             {(stats.overdue_invoices_count ?? 0) > 0 && (
-              <li className="flex items-center justify-between py-2 border-b border-amber-200/50 last:border-0">
-                <span className="text-amber-800 font-medium">Overdue invoices: {stats.overdue_invoices_count}</span>
-                <Link to="/account/ar" className="text-sm text-amber-700 hover:underline font-medium">View AR →</Link>
+              <li className="flex items-center justify-between">
+                <span className="text-amber-800 text-sm">Overdue invoices: <strong>{stats.overdue_invoices_count}</strong></span>
+                <Link to="/account/ar" className="text-xs text-amber-700 hover:underline">View AR →</Link>
               </li>
             )}
             {(stats.insurance_expiring_soon_count ?? 0) > 0 && (
-              <li className="flex items-center justify-between py-2 border-b border-amber-200/50 last:border-0">
-                <span className="text-orange-800 font-medium">Carriers with insurance expiring in 30 days: {stats.insurance_expiring_soon_count}</span>
-                <Link to="/partner?type=carrier" className="text-sm text-orange-700 hover:underline font-medium">View Carriers →</Link>
+              <li className="flex items-center justify-between">
+                <span className="text-orange-800 text-sm">Insurance expiring (30d): <strong>{stats.insurance_expiring_soon_count}</strong></span>
+                <Link to="/partner?view=carrier" className="text-xs text-orange-700 hover:underline">View Carriers →</Link>
               </li>
             )}
           </ul>
         </div>
       )}
 
-      {/* AP 요약 블록 */}
-      {apSummary && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link to="/account/ap" className="card flex flex-col gap-1 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total AP (CAD)</span>
-            <div className="text-2xl font-bold text-gray-800">{apSummary.total_ap.toLocaleString()}</div>
-          </Link>
-          <Link to="/account/ap" className="card flex flex-col gap-1 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Unpaid AP (CAD)</span>
-            <div className="text-2xl font-bold text-rose-700">{apSummary.unpaid_ap.toLocaleString()}</div>
-          </Link>
-          <Link to="/account/ap" className="card flex flex-col gap-1 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Unpaid AP Count</span>
-            <div className="text-2xl font-bold text-amber-700">{apSummary.overdue_ap_count}</div>
-            <span className="text-sm text-blue-600 hover:underline">View AP →</span>
-          </Link>
-        </div>
-      )}
-
-      {/* KPI 카드 — Phase 2: 전 기간 대비 % */}
+      {/* ── Row 1: KPI Cards ─────────────────────────────────────────── */}
       {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          <Link
-            to="/order"
-            className="card flex flex-col gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-          >
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <Link to="/order" className="card flex flex-col gap-1 hover:shadow-md hover:-translate-y-0.5 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Loads</span>
+              <span className="text-xs font-medium text-gray-500 uppercase">Total Loads</span>
               <IconLoads />
             </div>
             <div className="text-2xl font-bold text-gray-900">{stats.total_loads.toLocaleString()}</div>
-            {stats.pct_change_loads != null && <div>{renderPct(stats.pct_change_loads)}</div>}
-            <span className="text-sm text-blue-600 hover:underline">View orders →</span>
+            {stats.pct_change_loads != null && renderPct(stats.pct_change_loads)}
           </Link>
-
-          <div className="card flex flex-col gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+          <div className="card flex flex-col gap-1 hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Revenue (CAD)</span>
+              <span className="text-xs font-medium text-gray-500 uppercase">Revenue</span>
               <IconRevenue />
             </div>
-            <div className="text-2xl font-bold text-emerald-700">{stats.total_revenue.toLocaleString()}</div>
-            {stats.pct_change_revenue != null && <div>{renderPct(stats.pct_change_revenue)}</div>}
+            <div className="text-2xl font-bold text-emerald-700">${stats.total_revenue.toLocaleString()}</div>
+            {stats.pct_change_revenue != null && renderPct(stats.pct_change_revenue)}
           </div>
-
-          <div className="card flex flex-col gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+          <div className="card flex flex-col gap-1 hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Cost (CAD)</span>
+              <span className="text-xs font-medium text-gray-500 uppercase">Cost</span>
               <IconCost />
             </div>
-            <div className="text-2xl font-bold text-rose-700">{stats.total_cost.toLocaleString()}</div>
-            {stats.pct_change_cost != null && <div>{renderPct(stats.pct_change_cost, true)}</div>}
+            <div className="text-2xl font-bold text-rose-700">${stats.total_cost.toLocaleString()}</div>
+            {stats.pct_change_cost != null && renderPct(stats.pct_change_cost, true)}
           </div>
-
-          <div className="card flex flex-col gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+          <div className="card flex flex-col gap-1 hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Profit (CAD)</span>
+              <span className="text-xs font-medium text-gray-500 uppercase">Profit</span>
               <IconProfit />
             </div>
-            <div className="text-2xl font-bold text-blue-700">{stats.total_profit.toLocaleString()}</div>
-            {stats.pct_change_profit != null && <div>{renderPct(stats.pct_change_profit)}</div>}
+            <div className="text-2xl font-bold text-blue-700">${stats.total_profit.toLocaleString()}</div>
+            {stats.pct_change_profit != null && renderPct(stats.pct_change_profit)}
           </div>
-
-          {stats.ar_outstanding != null && (
-            <Link
-              to="/account/ar"
-              className="card flex flex-col gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-            >
+          {stats.ar_outstanding != null ? (
+            <Link to="/account/ar" className="card flex flex-col gap-1 hover:shadow-md hover:-translate-y-0.5 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">AR Outstanding (CAD)</span>
+                <span className="text-xs font-medium text-gray-500 uppercase">AR Outstanding</span>
                 <IconAR />
               </div>
-              <div className="text-2xl font-bold text-amber-700">{stats.ar_outstanding.toLocaleString()}</div>
-              <span className="text-sm text-blue-600 hover:underline">Invoicing →</span>
+              <div className="text-2xl font-bold text-amber-700">${stats.ar_outstanding.toLocaleString()}</div>
+              <span className="text-xs text-blue-600">View →</span>
             </Link>
-          )}
+          ) : apSummary ? (
+            <Link to="/account/ap" className="card flex flex-col gap-1 hover:shadow-md hover:-translate-y-0.5 transition-all">
+              <span className="text-xs font-medium text-gray-500 uppercase">Total AP</span>
+              <div className="text-2xl font-bold text-gray-800">${apSummary.total_ap.toLocaleString()}</div>
+              <span className="text-xs text-blue-600">View AP →</span>
+            </Link>
+          ) : null}
         </div>
       )}
 
-      {/* Phase 3: Top 10 Customers + Recently Dispatched Carriers — 2열 */}
-      {stats && (stats.top_customers?.length || stats.recently_dispatched_carriers?.length) ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {stats.top_customers && stats.top_customers.length > 0 && (
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-800">Top 10 Customers</h2>
-                <Link to="/partner?type=customer" className="text-sm text-blue-600 hover:underline font-medium">View all →</Link>
+      {/* ── Row 2: AP Summary (left) + Recently Dispatched Carriers (right) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* AP Summary card */}
+        {apSummary && (
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-800">AP Summary</h2>
+              <Link to="/account/ap" className="text-xs text-blue-600 hover:underline">View AP →</Link>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm text-gray-600">Total AP</span>
+                <span className="font-bold text-gray-800">${apSummary.total_ap.toLocaleString()}</span>
               </div>
-              <div className="table-wrap overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="table-header">
-                    <tr>
-                      <th className="px-4 py-2.5 text-left">Customer</th>
-                      <th className="px-4 py-2.5 text-right">Balance</th>
-                      <th className="px-4 py-2.5 text-right">Income</th>
-                      <th className="px-4 py-2.5 text-right">Cost</th>
-                      <th className="px-4 py-2.5 text-right">Profit</th>
-                      <th className="px-4 py-2.5 text-right">Ratio %</th>
-                      <th className="px-4 py-2.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.top_customers.map((c) => (
-                      <tr key={c.customer_id} className="border-t border-gray-100 hover:bg-gray-50">
-                        <td className="px-4 py-2.5 font-medium">
-                          {c.customer_id !== '_no_customer' ? (
-                            <Link to={`/partner/${c.customer_id}`} className="text-blue-600 hover:underline">{c.name}</Link>
-                          ) : (
-                            c.name
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">{c.balance.toLocaleString()}</td>
-                        <td className="px-4 py-2.5 text-right">{c.income.toLocaleString()}</td>
-                        <td className="px-4 py-2.5 text-right">{c.cost.toLocaleString()}</td>
-                        <td className="px-4 py-2.5 text-right">{c.profit.toLocaleString()}</td>
-                        <td className="px-4 py-2.5 text-right">{c.ratio != null ? `${c.ratio}%` : '–'}</td>
-                        <td className="px-4 py-2.5 text-right">
-                          {c.customer_id !== '_no_customer' && (
-                            <Link to={`/order?customer_id=${c.customer_id}`} className="text-blue-600 hover:underline text-xs font-medium">View</Link>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm text-gray-600">Unpaid AP</span>
+                <span className="font-bold text-rose-700">${apSummary.unpaid_ap.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-gray-600">Overdue Count</span>
+                <span className="font-bold text-amber-700">{apSummary.overdue_ap_count}</span>
               </div>
             </div>
-          )}
-          {stats.recently_dispatched_carriers && stats.recently_dispatched_carriers.length > 0 && (
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-800">Recently Dispatched Carriers</h2>
-                <Link to="/partner?type=carrier" className="text-sm text-blue-600 hover:underline font-medium">View all →</Link>
+            {/* Loads by Status mini list */}
+            {stats && Object.keys(stats.by_status || {}).length > 0 && (
+              <div className="border-t pt-3">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Loads by Status</h3>
+                <div className="space-y-1.5">
+                  {Object.entries(stats.by_status)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, 5)
+                    .map(([status, count]) => {
+                      const pct = totalByStatus > 0 ? (count / totalByStatus) * 100 : 0
+                      const barPct = maxStatusCount > 0 ? (count / maxStatusCount) * 100 : 0
+                      return (
+                        <Link key={status} to={`/order?status=${status}`} className="block group">
+                          <div className="flex justify-between mb-0.5">
+                            <span className="text-xs text-gray-600 capitalize group-hover:text-blue-600">{status.replace(/_/g, ' ')}</span>
+                            <span className="text-xs text-gray-500">{count} ({pct.toFixed(0)}%)</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-slate-400 group-hover:bg-blue-500 rounded-full" style={{ width: `${barPct}%` }} />
+                          </div>
+                        </Link>
+                      )
+                    })}
+                </div>
               </div>
-              <div className="table-wrap overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="table-header">
-                    <tr>
-                      <th className="px-4 py-2.5 text-left">Date</th>
-                      <th className="px-4 py-2.5 text-left">Carrier</th>
-                      <th className="px-4 py-2.5 text-left">Load</th>
-                      <th className="px-4 py-2.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.recently_dispatched_carriers.map((d, i) => (
-                      <tr key={d.load_id + String(i)} className="border-t border-gray-100 hover:bg-gray-50">
-                        <td className="px-4 py-2.5 text-gray-600">{d.date ? new Date(d.date).toLocaleDateString() : '–'}</td>
-                        <td className="px-4 py-2.5 font-medium">
-                          {d.carrier_id ? (
-                            <Link to={`/partner/${d.carrier_id}`} className="text-blue-600 hover:underline">{d.carrier_name}</Link>
-                          ) : (
-                            d.carrier_name
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <Link to={`/order/${d.load_id}`} className="text-blue-600 hover:underline">{d.load_number}</Link>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <Link to={`/order/${d.load_id}`} className="text-blue-600 hover:underline text-xs font-medium">View</Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            )}
+          </div>
+        )}
+
+        {/* Recently Dispatched Carriers */}
+        {stats?.recently_dispatched_carriers && stats.recently_dispatched_carriers.length > 0 && (
+          <div className="card lg:col-span-2">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-gray-800">Recently Dispatched Carriers</h2>
+              <Link to="/partner?view=carrier" className="text-xs text-blue-600 hover:underline">View all →</Link>
             </div>
-          )}
-        </div>
-      ) : null}
-
-      {/* Phase 2: Profit (Loads) — Revenue / Cost / Profit by period, 클릭 시 해당 기간 Order */}
-      {trend.length > 0 && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">Profit (Loads) by period</h2>
-            <Link to="/order" className="text-sm text-blue-600 hover:underline font-medium">View all orders →</Link>
-          </div>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trend} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
-                <Tooltip formatter={(v: number | string | undefined) => (v != null ? Number(v).toLocaleString() : '–')} labelFormatter={(l) => `Period: ${l}`} />
-                <Legend />
-                <Bar dataKey="revenue" name="Revenue" fill="#059669" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="cost" name="Cost" fill="#e11d48" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="profit" name="Profit" fill="#2563eb" radius={[2, 2, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">Data for selected period. Switch period above to change range.</p>
-        </div>
-      )}
-
-      {/* Recent Loads */}
-      {stats?.recent_loads && stats.recent_loads.length > 0 && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">Recent Loads</h2>
-            <Link to="/order" className="text-sm text-blue-600 hover:underline font-medium">View all orders →</Link>
-          </div>
-          <div className="table-wrap">
             <table className="min-w-full text-sm">
               <thead className="table-header">
                 <tr>
-                  <th className="px-4 py-2.5 text-left">Load #</th>
-                  <th className="px-4 py-2.5 text-left">Status</th>
-                  <th className="px-4 py-2.5 text-left">Customer</th>
-                  <th className="px-4 py-2.5 text-right">Rate (CAD)</th>
-                  <th className="px-4 py-2.5 text-left">Created</th>
-                  <th className="px-4 py-2.5 text-right">Actions</th>
+                  <th className="px-3 py-2 text-left">Date</th>
+                  <th className="px-3 py-2 text-left">Carrier</th>
+                  <th className="px-3 py-2 text-left">Load #</th>
+                  <th className="px-3 py-2 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {stats.recent_loads.map((l) => (
-                  <tr key={l.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-2.5 font-medium">
-                      <Link to={`/order/${l.id}`} className="text-blue-600 hover:underline">{l.load_number}</Link>
+                {stats.recently_dispatched_carriers.map((d, i) => (
+                  <tr key={d.load_id + String(i)} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-3 py-2 text-gray-500 text-xs">{d.date ? new Date(d.date).toLocaleDateString() : '–'}</td>
+                    <td className="px-3 py-2 font-medium">
+                      {d.carrier_id
+                        ? <Link to={`/partner/${d.carrier_id}`} className="text-blue-600 hover:underline">{d.carrier_name}</Link>
+                        : d.carrier_name}
                     </td>
-                    <td className="px-4 py-2.5">
-                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 capitalize">
-                        {l.status.replace(/_/g, ' ')}
-                      </span>
+                    <td className="px-3 py-2">
+                      <Link to={`/order/${d.load_id}`} className="text-blue-600 hover:underline">{d.load_number}</Link>
                     </td>
-                    <td className="px-4 py-2.5 text-gray-600">{l.customer_name ?? '–'}</td>
-                    <td className="px-4 py-2.5 text-right">{l.rate != null ? l.rate.toLocaleString() : '–'}</td>
-                    <td className="px-4 py-2.5 text-gray-500">{l.created_at ? new Date(l.created_at).toLocaleDateString() : '–'}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <Link to={`/order/${l.id}`} className="text-blue-600 hover:underline text-xs font-medium">View</Link>
+                    <td className="px-3 py-2 text-right">
+                      <Link to={`/order/${d.load_id}`} className="text-xs text-blue-600 hover:underline">View</Link>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Loads by Status */}
-      {stats && Object.keys(stats.by_status || {}).length > 0 && (
+      {/* ── Row 3: Profit Chart (left) + Top 10 Customers (right) ─────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Profit Chart */}
         <div className="card">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Loads by Status</h2>
-          <div className="space-y-3">
-            {Object.entries(stats.by_status)
-              .sort(([, a], [, b]) => b - a)
-              .map(([status, count]) => {
-                const pct = totalByStatus > 0 ? (count / totalByStatus) * 100 : 0
-                const barPct = maxStatusCount > 0 ? (count / maxStatusCount) * 100 : 0
-                return (
-                  <Link
-                    key={status}
-                    to={`/order?status=${status}`}
-                    className="block group"
-                  >
-                    <div className="flex items-center justify-between gap-3 mb-1">
-                      <span className="text-sm font-medium text-gray-700 capitalize group-hover:text-blue-600">
-                        {status.replace(/_/g, ' ')}
-                      </span>
-                      <span className="text-sm text-gray-500 tabular-nums">
-                        {count} <span className="text-gray-400">({pct.toFixed(0)}%)</span>
-                      </span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-slate-400 group-hover:bg-blue-500 rounded-full transition-all duration-300"
-                        style={{ width: `${barPct}%` }}
-                      />
-                    </div>
-                  </Link>
-                )
-              })}
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-gray-800">Profit (Sales)</h2>
+            <Link to="/order" className="text-xs text-blue-600 hover:underline">View orders →</Link>
           </div>
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <Link to="/order" className="text-sm text-blue-600 hover:underline font-medium">View all orders →</Link>
+          {trend.length > 0 ? (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={trend} margin={{ top: 4, right: 4, left: 0, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
+                  <Tooltip formatter={(v: number | string | undefined) => (v != null ? `$${Number(v).toLocaleString()}` : '–')} />
+                  <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="revenue" name="Revenue" fill="#059669" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="cost" name="Cost" fill="#e11d48" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="profit" name="Profit" fill="#2563eb" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-56 flex items-center justify-center text-gray-400 text-sm">
+              Select a period to see the profit trend chart.
+            </div>
+          )}
+          {stats && (
+            <div className="mt-3 pt-3 border-t flex gap-4 text-xs text-gray-600">
+              <span>Revenue: <strong className="text-emerald-700">${stats.total_revenue.toLocaleString()}</strong></span>
+              <span>Cost: <strong className="text-rose-700">${stats.total_cost.toLocaleString()}</strong></span>
+              <span>Profit: <strong className="text-blue-700">${stats.total_profit.toLocaleString()}</strong></span>
+            </div>
+          )}
+        </div>
+
+        {/* Top 10 Customers */}
+        {stats?.top_customers && stats.top_customers.length > 0 && (
+          <div className="card">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-gray-800">Top 10 Customers</h2>
+              <Link to="/partner?view=customer" className="text-xs text-blue-600 hover:underline">View all →</Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs">
+                <thead className="table-header">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Customer</th>
+                    <th className="px-3 py-2 text-right">Balance</th>
+                    <th className="px-3 py-2 text-right">Revenue</th>
+                    <th className="px-3 py-2 text-right">Cost</th>
+                    <th className="px-3 py-2 text-right">Profit</th>
+                    <th className="px-3 py-2 text-right">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.top_customers.map((c) => (
+                    <tr key={c.customer_id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-3 py-2 font-medium">
+                        {c.customer_id !== '_no_customer'
+                          ? <Link to={`/partner/${c.customer_id}`} className="text-blue-600 hover:underline">{c.name}</Link>
+                          : c.name}
+                      </td>
+                      <td className="px-3 py-2 text-right">{c.balance.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right text-emerald-700">{c.income.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right text-rose-700">{c.cost.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right text-blue-700">{c.profit.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right text-gray-500">{c.ratio != null ? `${c.ratio}%` : '–'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Row 4: Recent Loads ───────────────────────────────────────── */}
+      {stats?.recent_loads && stats.recent_loads.length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-gray-800">Recent Loads</h2>
+            <Link to="/order" className="text-xs text-blue-600 hover:underline">View all →</Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="table-header">
+                <tr>
+                  <th className="px-3 py-2 text-left">Load #</th>
+                  <th className="px-3 py-2 text-left">Status</th>
+                  <th className="px-3 py-2 text-left">Customer</th>
+                  <th className="px-3 py-2 text-right">Rate</th>
+                  <th className="px-3 py-2 text-left">Created</th>
+                  <th className="px-3 py-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.recent_loads.map((l) => (
+                  <tr key={l.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium">
+                      <Link to={`/order/${l.id}`} className="text-blue-600 hover:underline">{l.load_number}</Link>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 capitalize">{l.status.replace(/_/g, ' ')}</span>
+                    </td>
+                    <td className="px-3 py-2 text-gray-600">{l.customer_name ?? '–'}</td>
+                    <td className="px-3 py-2 text-right">{l.rate != null ? `$${l.rate.toLocaleString()}` : '–'}</td>
+                    <td className="px-3 py-2 text-gray-500 text-xs">{l.created_at ? new Date(l.created_at).toLocaleDateString() : '–'}</td>
+                    <td className="px-3 py-2 text-right">
+                      <Link to={`/order/${l.id}`} className="text-xs text-blue-600 hover:underline">View</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

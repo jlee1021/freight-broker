@@ -377,3 +377,100 @@ Permission을 **역할 이름 기반** CRUD 매트릭스로 관리:
 
 이 가이드를 읽은 후에는 **솔루션의 목적**, **기술 스택**, **백엔드(진입점·설정·DB·인증·라우터·모델)** 와 **프론트엔드(라우팅·인증·API 레이어·페이지 패턴)** 를 한 번에 파악할 수 있습니다.  
 버그 수정이나 기능 추가 시에는 위 **Part 8** 패턴과 해당 도메인의 `models/`, `api/routes/`, `pages/` 파일을 함께 보면 됩니다.
+
+---
+
+## Part 12. PartnerDetail 탭 구조 & Dashboard 레이아웃 (2026-03-03 최신)
+
+### 12.1 PartnerDetail (`/partner/:partnerId`)
+
+파트너 유형에 따라 탭 구조가 다르게 표시됩니다.
+
+#### Customer 탭 구조
+
+| 탭 | 설명 |
+|----|------|
+| **General** | 2-column 레이아웃: 좌측(Customer Info) / 우측(Billing+Tax, 파란 배경) |
+| **Load Setup** | 로드 요구사항 설정 (장비 타입, MC#, DOT#, Truck Calls 등) |
+| **Quick View** | 이 고객의 최근 로드 20건 표시 → `/order?customer_id=...` 링크 |
+| **Locations** | 고객 배송지 목록 + CRUD |
+| **Staff** | 고객사 담당자 목록 + CRUD |
+| **Teams** | 팀 연결 |
+| **Services** | 서비스 항목 |
+| **Email Templates** | 이메일 템플릿 |
+
+**General 탭 우측 패널 필드** (Billing): Credit Terms, Currency (CAD/USD), Credit Limit, Account Type, Truck Calls, Discount %, Tax Code, Expense Terms
+
+#### Carrier 탭 구조
+
+| 탭 | 설명 |
+|----|------|
+| **General** | 2-column 레이아웃: 좌측(Carrier Info) / 우측(Operation Info 파란+Payment 앰버) |
+| **Contacts** | 캐리어 연락처 목록 + CRUD |
+| **Vehicles** | 차량 목록 |
+| **Operation Info** | 운영 정보 (operation times, timezone, payment, API works) |
+| **Teams** | 팀 연결 |
+| **Services** | 서비스 항목 |
+| **Email Templates** | 이메일 템플릿 |
+
+#### 헤더 구성
+
+```
+[← Back]  [Customer Detail — {name}]          [Active 토글] [+ New] [Save]
+```
+
+- Active 토글: 슬라이드 스위치 (`is_active` 필드 제어)
+- 탭 활성화 색상: 파란색 하단 보더 (`border-blue-600`)
+
+#### Partner 모델 추가 필드 (2026-03-03 기준)
+
+백엔드 모델(`models/partner.py`)과 스키마(`schemas/partner.py`)에 반영된 필드:
+- `credit_limit` (Integer)
+- `truck_calls` (Integer)
+- `account_type` (String 50)
+- `discount_pct` (Integer)
+- `currency` (String 10)
+- `expense_terms` (String 100)
+- `is_active` (Boolean, default True)
+
+---
+
+### 12.2 Dashboard (`/`)
+
+#### 레이아웃 구조 (참조 이미지 기준)
+
+```
+[Header + Period Selector]
+[Alerts (overdue/insurance, 조건부)]
+[Row 1] KPI 카드 5개 — Total Loads | Revenue | Cost | Profit | AR Outstanding
+[Row 2] 3열 그리드
+  ├─ 1열: AP Summary (Total/Unpaid/Overdue) + Loads by Status 미니 바
+  └─ 2열: Recently Dispatched Carriers 테이블
+[Row 3] 2열 그리드
+  ├─ Profit (Sales) 바 차트 (Revenue/Cost/Profit by period)
+  └─ Top 10 Customers 테이블
+[Row 4] Recent Loads 전체 테이블
+```
+
+#### 기간 선택
+
+기간 선택기는 우측 상단 드롭다운: `All time / Last 7 days / Last 30 days / Last 90 days / This month`
+
+기간을 선택하면:
+- KPI 카드 수치 + 전기간 대비 % 변동률
+- Profit 바 차트에 기간별 데이터 표시
+
+#### 차트
+
+- `recharts` 라이브러리 사용
+- `BarChart`로 Revenue/Cost/Profit 표시
+- 기간 미선택 시 "Select a period" 안내 메시지 표시
+
+---
+
+### 12.3 관련 구현 문서
+
+| 문서 | 내용 |
+|------|------|
+| `docs/impl/IMPL_REFERENCE_ALIGNMENT_V2.md` | Partner/Permission/AR/AP/Consolidation/OSD/Profit UI 정렬 |
+| `docs/impl/IMPL_PARTNER_DETAIL_AND_DASHBOARD_V3.md` | PartnerDetail 탭 재구성 + Dashboard 레이아웃 재편 (최신) |

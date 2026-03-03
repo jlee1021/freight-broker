@@ -15,6 +15,10 @@ type Partner = {
   payment_days: number | null; payment_type: string | null
   ach_eft_banking: string | null; factor_company_name: string | null
   personal_message: string | null; bill_to: string | null
+  credit_limit: number | null; truck_calls: number | null
+  account_type: string | null; discount_pct: number | null
+  currency: string | null; expense_terms: string | null
+  is_active: boolean
 }
 
 type Location = { id: string; name?: string; address?: string; tel?: string; city?: string; state?: string; zip_code?: string; entry_date?: string; notes?: string; bill?: string; description?: string; billing_ship_to?: string; comments?: string; is_active: boolean }
@@ -22,7 +26,7 @@ type Staff = { id: string; full_name: string; department?: string; email?: strin
 type Contact = { id: string; name: string; department?: string; email?: string; phone?: string; is_primary: boolean }
 type Vehicle = { id: string; vehicle_type?: string; vehicle_number?: string; model?: string; price?: number }
 
-type DetailTab = 'detail' | 'locations' | 'staff' | 'contacts' | 'vehicles' | 'teams' | 'services' | 'email_templates' | 'operation_info'
+type DetailTab = 'general' | 'load_setup' | 'quick_view' | 'locations' | 'staff' | 'contacts' | 'vehicles' | 'teams' | 'services' | 'email_templates' | 'operation_info'
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -571,85 +575,263 @@ function OperationInfoTab({ partnerId }: { partnerId: string }) {
   )
 }
 
-// ── Detail 탭 (기본 정보 + 캐리어 확장) ─────────────────────────────
-function DetailTab({ form, setForm, isCarrier, save, saving }: {
-  form: any; setForm: any; isCarrier: boolean; save: () => void; saving: boolean
+// ── Customer General 탭 (2-column: Info | Billing) ────────────────
+function CustomerGeneralTab({ form, setForm }: {
+  form: any; setForm: any; partnerId?: string; save?: () => void; saving?: boolean
 }) {
-  const field = (label: string, key: string, type = 'text') => (
+  const fi = (label: string, key: string, type = 'text') => (
     <div key={key}>
-      <label className="block text-xs text-gray-600 mb-0.5">{label}</label>
+      <label className="block text-xs text-gray-500 mb-0.5">{label}</label>
       <input type={type} value={form[key] || ''} onChange={e => setForm((f: any) => ({ ...f, [key]: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm" />
-    </div>
-  )
-  const checkbox = (label: string, key: string) => (
-    <div key={key} className="flex items-center gap-2">
-      <input type="checkbox" checked={!!form[key]} onChange={e => setForm((f: any) => ({ ...f, [key]: e.target.checked }))} />
-      <label className="text-sm">{label}</label>
     </div>
   )
 
   return (
-    <div className="space-y-4">
-      {/* 기본 정보 */}
-      <div className="grid grid-cols-2 gap-3">
-        {field('Name *', 'name')}
-        {field('Code', 'code')}
-        <div>
-          <label className="block text-xs text-gray-600 mb-0.5">Type</label>
-          <select value={form.type || ''} onChange={e => setForm((f: any) => ({ ...f, type: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm">
-            <option value="">--</option>
-            <option value="customer">Customer</option>
-            <option value="carrier">Carrier</option>
-          </select>
+    <div className="flex gap-0">
+      {/* LEFT: Customer Info */}
+      <div className="flex-1 pr-4 space-y-3">
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Customer Info</h4>
+        {fi('Name *', 'name')}
+        {fi('Address', 'address')}
+        <div className="grid grid-cols-2 gap-2">
+          {fi('Country', 'country')}
+          {fi('Province', 'province')}
+          {fi('City', 'city')}
+          {fi('Postal Code', 'postal_code')}
         </div>
-        {field('Contact Email', 'contact_email', 'email')}
-        {field('Contact Phone', 'contact_phone')}
-        {field('Address', 'address')}
-        {field('City', 'city')}
-        {field('Province', 'province')}
-        {field('Country', 'country')}
-        {field('Postal Code', 'postal_code')}
-        {field('MC#', 'mc_number')}
-        {field('DOT#', 'dot_number')}
-        {field('Insurance Expiry', 'insurance_expiry', 'date')}
-        {field('Payment Terms', 'payment_terms')}
-        {field('Bill To', 'bill_to')}
+        {fi('Account No', 'code')}
+        {fi('Load Req', 'bill_to')}
+        <div>
+          <label className="block text-xs text-gray-500 mb-0.5">Load Information</label>
+          <textarea value={form.notes || ''} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} rows={2} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        {fi('Contact Email', 'contact_email', 'email')}
+        {fi('Contact Phone', 'contact_phone')}
+      </div>
+      {/* RIGHT: Billing + Tax (blue bg) */}
+      <div className="w-72 shrink-0 bg-blue-50 rounded-lg p-4 space-y-4">
+        <div>
+          <h4 className="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-2">Billing</h4>
+          <div className="space-y-2">
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Credit Terms</label>
+              <input value={form.payment_terms || ''} onChange={e => setForm((f: any) => ({ ...f, payment_terms: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Currency</label>
+              <select value={form.currency || 'CAD'} onChange={e => setForm((f: any) => ({ ...f, currency: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white">
+                <option value="CAD">CAD</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Credit Limit</label>
+              <input type="number" value={form.credit_limit || ''} onChange={e => setForm((f: any) => ({ ...f, credit_limit: Number(e.target.value) || null }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Account Type</label>
+              <input value={form.account_type || ''} onChange={e => setForm((f: any) => ({ ...f, account_type: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Truck Calls</label>
+              <input type="number" value={form.truck_calls || ''} onChange={e => setForm((f: any) => ({ ...f, truck_calls: Number(e.target.value) || null }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Discount %</label>
+              <input type="number" value={form.discount_pct || ''} onChange={e => setForm((f: any) => ({ ...f, discount_pct: Number(e.target.value) || null }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white" />
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-blue-200 pt-3">
+          <h4 className="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-2">Tax</h4>
+          <div className="space-y-2">
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Tax Code</label>
+              <input value={form.default_tax_code || ''} onChange={e => setForm((f: any) => ({ ...f, default_tax_code: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Expense Terms</label>
+              <input value={form.expense_terms || ''} onChange={e => setForm((f: any) => ({ ...f, expense_terms: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Carrier General 탭 (2-column: Info | Operation) ────────────────
+function CarrierGeneralTab({ form, setForm }: {
+  form: any; setForm: any; partnerId?: string; save?: () => void; saving?: boolean
+}) {
+  const fi = (label: string, key: string, type = 'text') => (
+    <div key={key}>
+      <label className="block text-xs text-gray-500 mb-0.5">{label}</label>
+      <input type={type} value={form[key] || ''} onChange={e => setForm((f: any) => ({ ...f, [key]: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm" />
+    </div>
+  )
+  const chk = (label: string, key: string) => (
+    <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
+      <input type="checkbox" checked={!!form[key]} onChange={e => setForm((f: any) => ({ ...f, [key]: e.target.checked }))} />
+      {label}
+    </label>
+  )
+
+  return (
+    <div className="flex gap-0">
+      {/* LEFT: Carrier Info */}
+      <div className="flex-1 pr-4 space-y-3">
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Carrier Info</h4>
+        {fi('Name *', 'name')}
+        {fi('Legal Name', 'legal_name')}
+        {fi('Address', 'address')}
+        <div className="grid grid-cols-2 gap-2">
+          {fi('Country', 'country')}
+          {fi('Province', 'province')}
+          {fi('City', 'city')}
+          {fi('Postal Code', 'postal_code')}
+        </div>
+        {fi('MC#', 'mc_number')}
+        {fi('DOT#', 'dot_number')}
+        {fi('Insurance Expiry', 'insurance_expiry', 'date')}
+        <div>
+          <label className="block text-xs text-gray-500 mb-0.5">Postal Message</label>
+          <textarea value={form.personal_message || ''} onChange={e => setForm((f: any) => ({ ...f, personal_message: e.target.value }))} rows={2} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-0.5">Notes</label>
+          <textarea value={form.notes || ''} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} rows={2} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div className="flex gap-4">
+          {chk('Hazmat Carrier', 'hazmat_carrier')}
+          {chk('W9 Received', 'w9_received')}
+        </div>
+      </div>
+      {/* RIGHT: Operation + Payment Info */}
+      <div className="w-72 shrink-0 space-y-4">
+        <div className="bg-blue-50 rounded-lg p-4 space-y-2">
+          <h4 className="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-2">Operation Info</h4>
+          {fi('Carrier Type', 'carrier_type')}
+          {fi('Operating Status', 'operating_status')}
+          {fi('MC Status', 'mc_status')}
+          {fi('Service Hours', 'service_hours')}
+          {fi('Contact Email', 'contact_email', 'email')}
+          {fi('Contact Phone', 'contact_phone')}
+        </div>
+        <div className="bg-amber-50 rounded-lg p-4 space-y-2">
+          <h4 className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2">Payment Info</h4>
+          <div>
+            <label className="block text-xs text-gray-600 mb-0.5">Currency</label>
+            <select value={form.currency || 'CAD'} onChange={e => setForm((f: any) => ({ ...f, currency: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white">
+              <option value="CAD">CAD</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+          {fi('Payment Terms', 'payment_terms')}
+          {fi('Payment Days', 'payment_days', 'number')}
+          {fi('Payment Type', 'payment_type')}
+          {fi('Factor Company', 'factor_company_name')}
+          {fi('ACH/EFT Banking', 'ach_eft_banking')}
+          <div>
+            <label className="block text-xs text-gray-600 mb-0.5">Tax Code</label>
+            <input value={form.default_tax_code || ''} onChange={e => setForm((f: any) => ({ ...f, default_tax_code: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm bg-white" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Load Setup 탭 (고객 전용) ──────────────────────────────────────
+function LoadSetupTab({ form, setForm }: { form: any; setForm: any }) {
+  return (
+    <div className="space-y-4">
+      <h4 className="text-sm font-semibold text-gray-700">Load Requirements & Setup</h4>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs text-gray-500 mb-0.5">Default Equipment Type</label>
+          <input value={form.carrier_type || ''} onChange={e => setForm((f: any) => ({ ...f, carrier_type: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="Dry Van, Reefer..." />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-0.5">Billing Ref</label>
+          <input value={form.bill_to || ''} onChange={e => setForm((f: any) => ({ ...f, bill_to: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-0.5">MC#</label>
+          <input value={form.mc_number || ''} onChange={e => setForm((f: any) => ({ ...f, mc_number: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-0.5">DOT#</label>
+          <input value={form.dot_number || ''} onChange={e => setForm((f: any) => ({ ...f, dot_number: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-0.5">Truck Calls</label>
+          <input type="number" value={form.truck_calls || ''} onChange={e => setForm((f: any) => ({ ...f, truck_calls: Number(e.target.value) || null }))} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-0.5">Insurance Expiry</label>
+          <input type="date" value={form.insurance_expiry ? String(form.insurance_expiry).slice(0, 10) : ''} onChange={e => setForm((f: any) => ({ ...f, insurance_expiry: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
       </div>
       <div>
-        <label className="block text-xs text-gray-600 mb-0.5">Notes</label>
-        <textarea value={form.notes || ''} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} rows={2} className="w-full border rounded px-2 py-1.5 text-sm" />
+        <label className="block text-xs text-gray-500 mb-0.5">Service Notes</label>
+        <textarea value={form.service_hours || ''} onChange={e => setForm((f: any) => ({ ...f, service_hours: e.target.value }))} rows={3} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="Special requirements, load conditions..." />
       </div>
+    </div>
+  )
+}
 
-      {isCarrier && (
-        <div className="border-t pt-4">
-          <h3 className="font-semibold text-sm text-gray-700 mb-3">Carrier Details</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {field('Legal Name', 'legal_name')}
-            {field('Operating Status', 'operating_status')}
-            {field('Carrier Type', 'carrier_type')}
-            {field('MC Status', 'mc_status')}
-            {field('Service Hours', 'service_hours')}
-            {field('Default Tax Code', 'default_tax_code')}
-            {field('Payment Days', 'payment_days', 'number')}
-            {field('Payment Type', 'payment_type')}
-            {field('ACH/EFT Banking', 'ach_eft_banking')}
-            {field('Factor Company', 'factor_company_name')}
-          </div>
-          <div className="flex gap-6 mt-3">
-            {checkbox('Hazmat Carrier', 'hazmat_carrier')}
-            {checkbox('W9 Received', 'w9_received')}
-          </div>
-          <div className="mt-3">
-            <label className="block text-xs text-gray-600 mb-0.5">Personal Message</label>
-            <textarea value={form.personal_message || ''} onChange={e => setForm((f: any) => ({ ...f, personal_message: e.target.value }))} rows={2} className="w-full border rounded px-2 py-1.5 text-sm" />
-          </div>
-        </div>
-      )}
+// ── Quick View 탭 (고객의 최근 로드) ──────────────────────────────
+function QuickViewTab({ partnerId }: { partnerId: string }) {
+  const [loads, setLoads] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-      <div className="pt-2">
-        <button onClick={save} disabled={saving} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+  useEffect(() => {
+    apiJson<{ items: any[] }>(`/loads?customer_id=${partnerId}&limit=20`)
+      .then(d => setLoads(d.items || []))
+      .catch(() => setLoads([]))
+      .finally(() => setLoading(false))
+  }, [partnerId])
+
+  if (loading) return <div className="p-4 text-gray-500">Loading...</div>
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold text-gray-700">Recent Loads (Last 20)</h4>
+        <Link to={`/order?customer_id=${partnerId}`} className="text-xs text-blue-600 hover:underline">View All →</Link>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">Load #</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">Status</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">Pickup</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">Delivery</th>
+              <th className="px-3 py-2 text-right font-medium text-gray-600">Revenue</th>
+              <th className="px-3 py-2 text-right font-medium text-gray-600">Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loads.length === 0 ? (
+              <tr><td colSpan={6} className="px-3 py-6 text-center text-gray-400">No loads found for this customer.</td></tr>
+            ) : loads.map((l: any) => (
+              <tr key={l.id} className="border-t hover:bg-gray-50">
+                <td className="px-3 py-2">
+                  <Link to={`/order/${l.id}`} className="text-blue-600 hover:underline font-medium">{l.load_number}</Link>
+                </td>
+                <td className="px-3 py-2">
+                  <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 capitalize">{(l.status || '').replace(/_/g, ' ')}</span>
+                </td>
+                <td className="px-3 py-2 text-gray-600">{l.pickup_date || l.created_at?.slice(0, 10) || '-'}</td>
+                <td className="px-3 py-2 text-gray-600">{l.delivery_date || '-'}</td>
+                <td className="px-3 py-2 text-right text-emerald-700">{l.revenue != null ? `$${Number(l.revenue).toLocaleString()}` : '-'}</td>
+                <td className="px-3 py-2 text-right text-blue-700">{l.profit != null ? `$${Number(l.profit).toLocaleString()}` : '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )
@@ -663,7 +845,7 @@ export default function PartnerDetail() {
 
   const [partner, setPartner] = useState<Partner | null>(null)
   const [saving, setSaving] = useState(false)
-  const [tab, setTab] = useState<DetailTab>('detail')
+  const [tab, setTab] = useState<DetailTab>('general')
   const [form, setForm] = useState<any>({
     name: '', type: '', contact_email: '', contact_phone: '',
     address: '', city: '', province: '', country: 'CANADA', postal_code: '',
@@ -672,6 +854,8 @@ export default function PartnerDetail() {
     service_hours: '', mc_status: '', hazmat_carrier: false, w9_received: false,
     default_tax_code: '', payment_days: '', payment_type: '', ach_eft_banking: '',
     factor_company_name: '', personal_message: '', bill_to: '',
+    credit_limit: '', truck_calls: '', account_type: '', discount_pct: '', currency: 'CAD', expense_terms: '',
+    is_active: true,
   })
 
   useEffect(() => {
@@ -694,6 +878,10 @@ export default function PartnerDetail() {
         payment_days: data.payment_days || '', payment_type: data.payment_type || '',
         ach_eft_banking: data.ach_eft_banking || '', factor_company_name: data.factor_company_name || '',
         personal_message: data.personal_message || '', bill_to: data.bill_to || '',
+        credit_limit: data.credit_limit || '', truck_calls: data.truck_calls || '',
+        account_type: data.account_type || '', discount_pct: data.discount_pct || '',
+        currency: data.currency || 'CAD', expense_terms: data.expense_terms || '',
+        is_active: data.is_active !== false,
       })
     })
   }, [partnerId, isNew])
@@ -717,35 +905,84 @@ export default function PartnerDetail() {
   if (!isNew && !partner) return <div className="p-4">Loading...</div>
 
   const isCarrier = form.type === 'carrier'
-  const tabs: { key: DetailTab; label: string }[] = [
-    { key: 'detail', label: 'Detail' },
+  const title = isNew ? 'New Partner' : (isCarrier ? 'Carrier Detail' : 'Customer Detail')
+
+  const customerTabs: { key: DetailTab; label: string }[] = [
+    { key: 'general', label: 'General' },
+    { key: 'load_setup', label: 'Load Setup' },
+    { key: 'quick_view', label: 'Quick View' },
     { key: 'locations', label: 'Locations' },
     { key: 'staff', label: 'Staff' },
     { key: 'teams', label: 'Teams' },
     { key: 'services', label: 'Services' },
     { key: 'email_templates', label: 'Email Templates' },
-    ...(isCarrier ? [
-      { key: 'contacts' as DetailTab, label: 'Contacts' },
-      { key: 'vehicles' as DetailTab, label: 'Vehicles' },
-      { key: 'operation_info' as DetailTab, label: 'Operation Info' },
-    ] : []),
   ]
+  const carrierTabs: { key: DetailTab; label: string }[] = [
+    { key: 'general', label: 'General' },
+    { key: 'contacts', label: 'Contacts' },
+    { key: 'vehicles', label: 'Vehicles' },
+    { key: 'operation_info', label: 'Operation Info' },
+    { key: 'teams', label: 'Teams' },
+    { key: 'services', label: 'Services' },
+    { key: 'email_templates', label: 'Email Templates' },
+  ]
+  const newTabs: { key: DetailTab; label: string }[] = [
+    { key: 'general', label: 'General' },
+  ]
+  const tabs = isNew ? newTabs : (isCarrier ? carrierTabs : customerTabs)
 
   return (
-    <div className="max-w-4xl">
-      <div className="flex items-center gap-3 mb-4">
-        <Link to="/partner" className="text-gray-600 hover:text-gray-800">← Partner</Link>
-        <h1 className="text-2xl font-bold text-gray-800">{isNew ? 'New Partner' : partner?.name}</h1>
+    <div className="max-w-5xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Link to="/partner" className="text-gray-500 hover:text-gray-700 text-sm">← Back</Link>
+          <h1 className="text-xl font-bold text-gray-800">{title}</h1>
+          {partner?.name && <span className="text-gray-500 text-sm">— {partner.name}</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Active toggle */}
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <span className="text-xs text-gray-500">Active</span>
+            <div
+              onClick={() => setForm((f: any) => ({ ...f, is_active: !f.is_active }))}
+              className={`relative w-10 h-5 rounded-full transition-colors ${form.is_active ? 'bg-blue-600' : 'bg-gray-300'}`}
+            >
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.is_active ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </div>
+          </label>
+          {!isNew && (
+            <button
+              onClick={() => navigate('/partner/new')}
+              className="px-3 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-50"
+            >+ New</button>
+          )}
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+          >{saving ? 'Saving...' : 'Save'}</button>
+        </div>
       </div>
-      <div className="flex gap-0 border-b mb-6">
+
+      {/* Tabs */}
+      <div className="flex gap-0 border-b mb-0">
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t.key ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t.key ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >{t.label}</button>
         ))}
       </div>
-      <div className="bg-white rounded-lg shadow p-5">
-        {tab === 'detail' && <DetailTab form={form} setForm={setForm} isCarrier={isCarrier} save={save} saving={saving} />}
+
+      <div className="bg-white rounded-b-lg shadow p-5">
+        {tab === 'general' && !isCarrier && (
+          <CustomerGeneralTab form={form} setForm={setForm} partnerId={partnerId} save={save} saving={saving} />
+        )}
+        {tab === 'general' && (isCarrier || isNew) && (
+          <CarrierGeneralTab form={form} setForm={setForm} partnerId={partnerId} save={save} saving={saving} />
+        )}
+        {tab === 'load_setup' && <LoadSetupTab form={form} setForm={setForm} />}
+        {tab === 'quick_view' && !isNew && <QuickViewTab partnerId={partnerId!} />}
         {tab === 'locations' && !isNew && <LocationsTab partnerId={partnerId!} partnerType={form.type} />}
         {tab === 'staff' && !isNew && <StaffTab partnerId={partnerId!} />}
         {tab === 'contacts' && !isNew && <ContactsTab partnerId={partnerId!} />}
