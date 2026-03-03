@@ -317,7 +317,61 @@ npm run dev
 | `COMPARISON_TMS_AND_CLONE_TARGET.md` | 참조 솔루션과 기능 비교 |
 | `WEB_STRUCTURE_ANALYSIS.md` | 메뉴 구조·참조와의 차이 |
 | `IMPLEMENTATION_COMPLETE.md` | clone 체크리스트 구현 요약 |
+| `docs/impl/IMPL_CLONE_REFERENCE_FULL.md` | Clone 참조 솔루션 전체 구현 내역 |
+| `docs/impl/IMPL_REFERENCE_ALIGNMENT_V2.md` | 참조 이미지 정밀 UI 정렬 (2026-03-03) |
 | `INSTALL.md`, `USER_MANUAL.md` | 설치·사용자 매뉴얼 |
+
+---
+
+## Part 11. 주요 페이지별 구조 (2026-03-03 기준 최신)
+
+### 11.1 Partner 페이지 (`/partner`)
+
+URL 파라미터 `?view=` 로 4개 뷰 분기:
+
+| view | URL | 설명 |
+|------|-----|------|
+| `customer` | `/partner?view=customer` | 고객 목록 (기본값) |
+| `carrier` | `/partner?view=carrier` | 캐리어 목록 |
+| `location` | `/partner?view=location` | 모든 파트너의 Location 집계 |
+| `staff` | `/partner?view=staff` | 모든 파트너의 Staff 집계 |
+
+**컬럼**: Created / Name / Address / Type / Truck Calls / Payment Terms / Credit Limit / Status / Action
+
+**백엔드 API**:
+- `GET /partners?type=customer&q=검색어` — Customer/Carrier 목록
+- `GET /partners/all-locations?q=검색어` — 전체 Location 목록 (partner_name 포함)
+- `GET /partners/all-staff?q=검색어` — 전체 Staff 목록 (partner_name 포함)
+
+### 11.2 Permission 탭 (`/setting?tab=permission`)
+
+Permission을 **역할 이름 기반** CRUD 매트릭스로 관리:
+- 좌측: Permission Name + Description
+- 우측: 모듈 × 액션(Read/Edit/Create) 체크박스
+- **모듈**: Dispatch(Order/Consolidation/EDI/OSD), Partner(Customer/Location/Carrier/OEF), Account(AR/AP/Expense/Debit+Credit/Item+List), Inventory(List), Group(Default/Qty/Permission)
+
+### 11.3 AR/AP (Invoicing)
+
+**AR 상태 탭**: All / Overdue (red) / Unpaid (lime) / Upcoming (amber, 7일 이내) / Paid (blue)  
+**AP 상태 탭**: All / Overdue / Unpaid / Paid / Upcoming  
+**필터**: 날짜 범위(Due Date) / Carrier·Load 검색
+
+### 11.4 Consolidation
+
+**상태 탭 9개**: Pending / Unassigned / On Hold / Ready to Load / Dispatch / In-transit / Delivered / Invoiced / Cancelled  
+**테이블 기능**: 행 클릭 시 Shipper/Consignee 상세 인라인 확장  
+**하단 요약**: Total count / Weight / Pallets / Items
+
+### 11.5 OSD
+
+**컬럼 순서** (참조 이미지 기준):
+`#` → Load → Date → Ref.# → Amount → Customer → Shipper → Carrier → Expired Cargo → Company Name → AR → AP → Due Date → Status → Action
+
+### 11.6 Profit
+
+**필터**: Period Date (From/To) + Customer Name + Customer 드롭다운 + Apply/Clear  
+**우측 요약**: Total Revenue / Cost / Profit (실시간 계산)  
+**테이블**: Date / Load# / Customer / Status / Revenue / Expense / Profit / Margin%
 
 ---
 
