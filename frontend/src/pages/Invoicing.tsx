@@ -34,6 +34,7 @@ export default function Invoicing({ viewMode = 'all' }: { viewMode?: ViewMode })
   const [createArLoadId, setCreateArLoadId] = useState('')
   const [creating, setCreating] = useState(false)
   const [arFilter, setArFilter] = useState<'all' | 'overdue'>('all')
+  const [apStatusFilter, setApStatusFilter] = useState<'all' | 'unpaid' | 'paid'>('all')
 
   const load = () => {
     const needAr = viewMode === 'ar' || viewMode === 'all'
@@ -85,6 +86,9 @@ export default function Invoicing({ viewMode = 'all' }: { viewMode?: ViewMode })
 
   const showAr = viewMode === 'ar' || viewMode === 'all'
   const showAp = viewMode === 'ap' || viewMode === 'all'
+  const filteredAp = apStatusFilter === 'all' ? ap
+    : apStatusFilter === 'unpaid' ? ap.filter(p => p.status !== 'paid')
+    : ap.filter(p => p.status === 'paid')
 
   return (
     <div className="space-y-8">
@@ -186,30 +190,45 @@ export default function Invoicing({ viewMode = 'all' }: { viewMode?: ViewMode })
 
       {showAp && (
       <section className="card">
-        <h2 className="text-lg font-semibold mb-4">AP – Carrier Payables</h2>
-        <div className="table-wrap">
-        <table className="min-w-full">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">AP – Carrier Payables</h2>
+            <div className="flex rounded border border-gray-300 overflow-hidden">
+              {(['all', 'unpaid', 'paid'] as const).map((f) => (
+                <button key={f} type="button"
+                  onClick={() => { setApStatusFilter(f) }}
+                  className={`px-3 py-1.5 text-sm capitalize ${apStatusFilter === f ? 'bg-red-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="table-wrap overflow-x-auto">
+        <table className="min-w-full text-sm">
           <thead className="table-header">
             <tr>
-              <th className="px-3 py-2 text-left">#</th>
+              <th className="px-3 py-2 text-left">Invoice #</th>
               <th className="px-3 py-2 text-left">Load</th>
               <th className="px-3 py-2 text-left">Carrier</th>
-              <th className="px-3 py-2 text-left">Amount</th>
+              <th className="px-3 py-2 text-right">Amount</th>
               <th className="px-3 py-2 text-left">Status</th>
               <th className="px-3 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {ap.length === 0 ? (
-              <tr><td colSpan={6} className="px-3 py-4 text-gray-500 text-center">No carrier payables. Create from Load detail (carrier segment).</td></tr>
+            {filteredAp.length === 0 ? (
+              <tr><td colSpan={6} className="px-3 py-4 text-gray-500 text-center">No carrier payables.</td></tr>
             ) : (
-              ap.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="px-3 py-2">{p.invoice_number ?? p.id.slice(0, 8)}</td>
-                  <td className="px-3 py-2">{p.load_number ?? '-'}</td>
-                  <td className="px-3 py-2">{p.carrier_name ?? '-'}</td>
-                  <td className="px-3 py-2">{Number(p.amount).toLocaleString()}</td>
-                  <td className="px-3 py-2">{p.status}</td>
+              filteredAp.map((p) => (
+                <tr key={p.id} className="border-t hover:bg-gray-50">
+                  <td className="px-3 py-2 font-medium">{p.invoice_number ?? p.id.slice(0, 8)}</td>
+                  <td className="px-3 py-2"><Link to={`/order/${p.carrier_segment_id}`} className="text-blue-600 hover:underline">{p.load_number ?? '–'}</Link></td>
+                  <td className="px-3 py-2">{p.carrier_name ?? '–'}</td>
+                  <td className="px-3 py-2 text-right">{Number(p.amount).toLocaleString()}</td>
+                  <td className="px-3 py-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>{p.status}</span>
+                  </td>
                   <td className="px-3 py-2 flex gap-1">
                     <button type="button" onClick={async () => { const r = await apiFetch(`/invoices/carrier/${p.id}/document`); const html = await r.text(); const w = window.open('', '_blank'); if (w) { w.document.write(html); w.document.close() } }} className="text-sm text-blue-600 hover:underline">View</button>
                     <button type="button" onClick={async () => { const r = await apiFetch(`/invoices/carrier/${p.id}/document/pdf`); const blob = await r.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `CarrierInvoice-${p.invoice_number ?? p.id.slice(0, 8)}.pdf`; a.click(); URL.revokeObjectURL(url) }} className="text-sm text-blue-600 hover:underline">PDF</button>

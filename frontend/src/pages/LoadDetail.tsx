@@ -85,6 +85,8 @@ type LoadDetail = {
   weight_unit: string | null
   commodity: string | null
   po_number: string | null
+  waybill_type: string | null
+  billing_type: string | null
   revenue: number | null
   cost: number | null
   profit_pct: number | null
@@ -173,6 +175,8 @@ export default function LoadDetail() {
         weight_unit: 'lbs',
         commodity: null,
         po_number: null,
+        waybill_type: null,
+        billing_type: null,
         revenue: null,
         cost: null,
         profit_pct: null,
@@ -581,14 +585,39 @@ export default function LoadDetail() {
               className="w-full border rounded px-2 py-1"
             />
           </div>
-          {load.revenue != null && (
-            <>
-              <div className="text-sm">Revenue: {load.revenue}</div>
-              <div className="text-sm">Cost: {load.cost ?? '-'}</div>
-              <div className="text-sm">Profit %: {load.profit_pct ?? '-'}</div>
-            </>
-          )}
+          <div>
+            <label className="block text-sm text-gray-600">Waybill Type</label>
+            <select value={load.waybill_type ?? ''} onChange={e => update({ waybill_type: e.target.value || null })} className="w-full border rounded px-2 py-1 text-sm">
+              <option value="">--</option>
+              {['Standard', 'Express', 'Economy', 'Custom'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600">Billing Type</label>
+            <select value={load.billing_type ?? ''} onChange={e => update({ billing_type: e.target.value || null })} className="w-full border rounded px-2 py-1 text-sm">
+              <option value="">--</option>
+              {['Per Piece', 'Per Pound', 'Per Mile', 'Flat Rate', 'Per Pallet'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
         </div>
+
+        {/* Revenue / Cost / Profit 요약 */}
+        {load.revenue != null && (
+          <div className="mt-4 grid grid-cols-3 gap-3 bg-gray-50 rounded p-3">
+            <div>
+              <div className="text-xs text-gray-500">Revenue</div>
+              <div className="font-semibold text-emerald-700">{Number(load.revenue).toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500">Cost</div>
+              <div className="font-semibold text-rose-700">{load.cost != null ? Number(load.cost).toLocaleString() : '–'}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500">Profit %</div>
+              <div className="font-semibold text-blue-700">{load.profit_pct != null ? `${load.profit_pct}%` : '–'}</div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Shippers */}

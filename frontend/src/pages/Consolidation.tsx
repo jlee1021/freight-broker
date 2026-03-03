@@ -182,6 +182,26 @@ export default function Consolidation() {
               </table>
             </div>
 
+            {/* 요약 합계 */}
+            <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg text-sm">
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Total Pallets (Shipper)</div>
+                <div className="font-semibold">{selected.customer_shippers.reduce((a, s) => a + (s.pallet_count ?? 0), 0)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Total Weight (Shipper)</div>
+                <div className="font-semibold">{selected.customer_shippers.reduce((a, s) => a + (s.weight ?? 0), 0).toLocaleString()} {selected.weight_unit || 'LB'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Total Pallets (Consignee)</div>
+                <div className="font-semibold">{selected.carrier_consignees.reduce((a, c) => a + (c.pallet_count ?? 0), 0)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Total Weight (Consignee)</div>
+                <div className="font-semibold">{selected.carrier_consignees.reduce((a, c) => a + (c.weight ?? 0), 0).toLocaleString()} {selected.weight_unit || 'LB'}</div>
+              </div>
+            </div>
+
             {/* Carrier Consignees */}
             <div>
               <div className="flex items-center justify-between mb-2">

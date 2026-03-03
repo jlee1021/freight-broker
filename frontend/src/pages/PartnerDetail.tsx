@@ -22,7 +22,7 @@ type Staff = { id: string; full_name: string; department?: string; email?: strin
 type Contact = { id: string; name: string; department?: string; email?: string; phone?: string; is_primary: boolean }
 type Vehicle = { id: string; vehicle_type?: string; vehicle_number?: string; model?: string; price?: number }
 
-type DetailTab = 'detail' | 'locations' | 'staff' | 'contacts' | 'vehicles'
+type DetailTab = 'detail' | 'locations' | 'staff' | 'contacts' | 'vehicles' | 'teams' | 'services' | 'email_templates' | 'operation_info'
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -353,6 +353,224 @@ function VehiclesTab({ partnerId }: { partnerId: string }) {
   )
 }
 
+// ── Teams 탭 ─────────────────────────────────────────────────────────
+function TeamsTab({ partnerId }: { partnerId: string }) {
+  type Team = { id: string; name: string; role?: string; email?: string; is_active: boolean }
+  const [items, setItems] = useState<Team[]>([])
+  const [form, setForm] = useState({ name: '', role: '', email: '' })
+  const [saving, setSaving] = useState(false)
+  const load = () => apiJson<Team[]>(`/partners/${partnerId}/teams`).then(setItems).catch(() => {})
+  useEffect(() => { load() }, [partnerId])
+  const save = async () => {
+    if (!form.name.trim()) return
+    setSaving(true)
+    try { await apiFetch(`/partners/${partnerId}/teams`, { method: 'POST', body: JSON.stringify(form) }); setForm({ name: '', role: '', email: '' }); load() } catch { alert('Save failed') }
+    setSaving(false)
+  }
+  return (
+    <div>
+      <div className="flex gap-2 mb-3 flex-wrap items-end">
+        {[['Name *', 'name'], ['Role', 'role'], ['Email', 'email']].map(([l, k]) => (
+          <div key={k}>
+            <label className="text-xs text-gray-600 block mb-0.5">{l}</label>
+            <input value={(form as any)[k]} onChange={e => setForm(p => ({ ...p, [k]: e.target.value }))} className="border rounded px-2 py-1.5 text-sm w-36" />
+          </div>
+        ))}
+        <button onClick={save} disabled={saving} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm">Add</button>
+      </div>
+      <table className="w-full text-sm border-collapse"><thead><tr className="bg-gray-50 text-left"><th className="border px-3 py-2">Name</th><th className="border px-3 py-2">Role</th><th className="border px-3 py-2">Email</th><th className="border px-3 py-2">Action</th></tr></thead>
+        <tbody>{items.map(t => (<tr key={t.id} className="hover:bg-gray-50">
+          <td className="border px-3 py-1.5 font-medium">{t.name}</td>
+          <td className="border px-3 py-1.5">{t.role ?? '–'}</td>
+          <td className="border px-3 py-1.5">{t.email ?? '–'}</td>
+          <td className="border px-3 py-1.5"><button onClick={async () => { if (confirm('Delete?')) { await apiFetch(`/partners/${partnerId}/teams/${t.id}`, { method: 'DELETE' }); load() } }} className="text-red-500 hover:underline text-xs">Del</button></td>
+        </tr>))}</tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── Services 탭 ──────────────────────────────────────────────────────
+function ServicesTab({ partnerId }: { partnerId: string }) {
+  type Service = { id: string; item: string; service_type?: string; quantity?: number; unit?: string; notes?: string; is_active: boolean }
+  const [items, setItems] = useState<Service[]>([])
+  const [form, setForm] = useState({ item: '', service_type: '', quantity: '', unit: '', notes: '' })
+  const [saving, setSaving] = useState(false)
+  const ITEMS = ['Air freight', 'FCL', 'LCL', 'LTL', 'Ocean freight', 'Rail', 'Road', 'Other']
+  const load = () => apiJson<Service[]>(`/partners/${partnerId}/services`).then(setItems).catch(() => {})
+  useEffect(() => { load() }, [partnerId])
+  const save = async () => {
+    if (!form.item.trim()) return
+    setSaving(true)
+    try { await apiFetch(`/partners/${partnerId}/services`, { method: 'POST', body: JSON.stringify({ ...form, quantity: form.quantity ? parseFloat(form.quantity) : null }) }); setForm({ item: '', service_type: '', quantity: '', unit: '', notes: '' }); load() } catch { alert('Save failed') }
+    setSaving(false)
+  }
+  return (
+    <div>
+      <div className="flex gap-2 mb-3 flex-wrap items-end">
+        <div>
+          <label className="text-xs text-gray-600 block mb-0.5">Item *</label>
+          <select value={form.item} onChange={e => setForm(p => ({ ...p, item: e.target.value }))} className="border rounded px-2 py-1.5 text-sm w-36">
+            <option value="">Select...</option>{ITEMS.map(i => <option key={i} value={i}>{i}</option>)}
+          </select>
+        </div>
+        {[['Type', 'service_type'], ['Qty', 'quantity'], ['Unit', 'unit']].map(([l, k]) => (
+          <div key={k}>
+            <label className="text-xs text-gray-600 block mb-0.5">{l}</label>
+            <input value={(form as any)[k]} onChange={e => setForm(p => ({ ...p, [k]: e.target.value }))} className="border rounded px-2 py-1.5 text-sm w-24" />
+          </div>
+        ))}
+        <button onClick={save} disabled={saving} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm">Add</button>
+      </div>
+      <table className="w-full text-sm border-collapse"><thead><tr className="bg-gray-50 text-left"><th className="border px-3 py-2">Item</th><th className="border px-3 py-2">Type</th><th className="border px-3 py-2">Qty</th><th className="border px-3 py-2">Unit</th><th className="border px-3 py-2">Action</th></tr></thead>
+        <tbody>{items.map(s => (<tr key={s.id} className="hover:bg-gray-50">
+          <td className="border px-3 py-1.5 font-medium">{s.item}</td>
+          <td className="border px-3 py-1.5">{s.service_type ?? '–'}</td>
+          <td className="border px-3 py-1.5">{s.quantity ?? '–'}</td>
+          <td className="border px-3 py-1.5">{s.unit ?? '–'}</td>
+          <td className="border px-3 py-1.5"><button onClick={async () => { if (confirm('Delete?')) { await apiFetch(`/partners/${partnerId}/services/${s.id}`, { method: 'DELETE' }); load() } }} className="text-red-500 hover:underline text-xs">Del</button></td>
+        </tr>))}</tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── Email Templates 탭 ───────────────────────────────────────────────
+function EmailTemplatesTab({ partnerId }: { partnerId: string }) {
+  type Tmpl = { id: string; template_type: string; send_reply: boolean; subject?: string; body?: string; leading_team?: string }
+  const [items, setItems] = useState<Tmpl[]>([])
+  const [form, setForm] = useState({ template_type: 'load_confirmation', send_reply: false, subject: '', body: '', leading_team: '' })
+  const [saving, setSaving] = useState(false)
+  const TYPES = ['load_confirmation', 'driver_display', 'rate_confirmation', 'pickup_notice', 'delivery_notice', 'invoice']
+  const load = () => apiJson<Tmpl[]>(`/partners/${partnerId}/email-templates`).then(setItems).catch(() => {})
+  useEffect(() => { load() }, [partnerId])
+  const save = async () => {
+    setSaving(true)
+    try { await apiFetch(`/partners/${partnerId}/email-templates`, { method: 'POST', body: JSON.stringify(form) }); load() } catch { alert('Save failed') }
+    setSaving(false)
+  }
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded">
+        <div>
+          <label className="text-xs text-gray-600 block mb-0.5">Template Type</label>
+          <select value={form.template_type} onChange={e => setForm(p => ({ ...p, template_type: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm">
+            {TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-600 block mb-0.5">Leading Team</label>
+          <input value={form.leading_team} onChange={e => setForm(p => ({ ...p, leading_team: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs text-gray-600 block mb-0.5">Subject</label>
+          <input value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs text-gray-600 block mb-0.5">Body</label>
+          <textarea value={form.body} onChange={e => setForm(p => ({ ...p, body: e.target.value }))} rows={3} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="checkbox" checked={form.send_reply} onChange={e => setForm(p => ({ ...p, send_reply: e.target.checked }))} />
+          <label className="text-sm">Send Reply</label>
+        </div>
+        <div className="flex justify-end">
+          <button onClick={save} disabled={saving} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm">{saving ? 'Saving...' : 'Add Template'}</button>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {items.map(t => (
+          <div key={t.id} className="border rounded p-3 flex justify-between items-start">
+            <div>
+              <span className="font-medium text-sm capitalize">{t.template_type.replace(/_/g, ' ')}</span>
+              {t.subject && <p className="text-xs text-gray-600 mt-1">{t.subject}</p>}
+            </div>
+            <button onClick={async () => { await apiFetch(`/partners/${partnerId}/email-templates/${t.id}`, { method: 'DELETE' }); load() }} className="text-red-500 hover:underline text-xs">Del</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Operation Info 탭 (캐리어 전용) ──────────────────────────────────
+function OperationInfoTab({ partnerId }: { partnerId: string }) {
+  const [form, setForm] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const load = () => apiJson<Record<string, string>>(`/partners/${partnerId}/operation-info`).then(d => setForm(d || {})).catch(() => {})
+  useEffect(() => { load() }, [partnerId])
+  const save = async () => {
+    setSaving(true)
+    try { await apiFetch(`/partners/${partnerId}/operation-info`, { method: 'PUT', body: JSON.stringify(form) }) } catch { alert('Save failed') }
+    setSaving(false)
+  }
+  const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm(p => ({ ...p, [k]: e.target.value }))
+  const OPS_TIMES = ['MON-FRI', 'MON-SAT', '24/7', 'BY APPT', 'CLOSED']
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-gray-600 block mb-0.5">Operation Times</label>
+          <select value={form.operation_times || ''} onChange={f('operation_times')} className="w-full border rounded px-2 py-1.5 text-sm">
+            <option value="">– Select –</option>{OPS_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-600 block mb-0.5">Timezone</label>
+          <input value={form.timezone || ''} onChange={f('timezone')} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="e.g. EST" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-600 block mb-0.5">Default Trip Type</label>
+          <input value={form.default_trip_type || ''} onChange={f('default_trip_type')} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-600 block mb-0.5">Default Rate Type</label>
+          <input value={form.default_rate_type || ''} onChange={f('default_rate_type')} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-600 block mb-0.5">Load Hours</label>
+          <input value={form.load_hours || ''} onChange={f('load_hours')} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-600 block mb-0.5">Pickup Hours</label>
+          <input value={form.pickup_hours || ''} onChange={f('pickup_hours')} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+      </div>
+      <div className="border-t pt-4">
+        <h4 className="text-sm font-semibold text-gray-700 mb-3">Payment Info</h4>
+        <div className="grid grid-cols-2 gap-3">
+          {[['Pay/Day', 'pay_per_day'], ['Invoice TT', 'invoice_tt'], ['Invoice ET', 'invoice_et'], ['E-Transfer', 'invoice_etransfer']].map(([l, k]) => (
+            <div key={k}>
+              <label className="text-xs text-gray-600 block mb-0.5">{l}</label>
+              <input value={form[k] || ''} onChange={f(k)} className="w-full border rounded px-2 py-1.5 text-sm" />
+            </div>
+          ))}
+          <div className="col-span-2">
+            <label className="text-xs text-gray-600 block mb-0.5">Payment Notes</label>
+            <textarea value={form.payment_notes || ''} onChange={f('payment_notes')} rows={2} className="w-full border rounded px-2 py-1.5 text-sm" />
+          </div>
+        </div>
+      </div>
+      <div className="border-t pt-4">
+        <h4 className="text-sm font-semibold text-gray-700 mb-3">API Works</h4>
+        <div className="grid grid-cols-2 gap-3">
+          {[['API Key', 'api_key'], ['API Secret', 'api_secret'], ['API Endpoint', 'api_endpoint']].map(([l, k]) => (
+            <div key={k}>
+              <label className="text-xs text-gray-600 block mb-0.5">{l}</label>
+              <input value={form[k] || ''} onChange={f(k)} className="w-full border rounded px-2 py-1.5 text-sm" />
+            </div>
+          ))}
+          <div className="col-span-2">
+            <label className="text-xs text-gray-600 block mb-0.5">API Notes</label>
+            <textarea value={form.api_notes || ''} onChange={f('api_notes')} rows={2} className="w-full border rounded px-2 py-1.5 text-sm" />
+          </div>
+        </div>
+      </div>
+      <div><button onClick={save} disabled={saving} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">{saving ? 'Saving...' : 'Save Operation Info'}</button></div>
+    </div>
+  )
+}
+
 // ── Detail 탭 (기본 정보 + 캐리어 확장) ─────────────────────────────
 function DetailTab({ form, setForm, isCarrier, save, saving }: {
   form: any; setForm: any; isCarrier: boolean; save: () => void; saving: boolean
@@ -503,9 +721,13 @@ export default function PartnerDetail() {
     { key: 'detail', label: 'Detail' },
     { key: 'locations', label: 'Locations' },
     { key: 'staff', label: 'Staff' },
+    { key: 'teams', label: 'Teams' },
+    { key: 'services', label: 'Services' },
+    { key: 'email_templates', label: 'Email Templates' },
     ...(isCarrier ? [
       { key: 'contacts' as DetailTab, label: 'Contacts' },
       { key: 'vehicles' as DetailTab, label: 'Vehicles' },
+      { key: 'operation_info' as DetailTab, label: 'Operation Info' },
     ] : []),
   ]
 
@@ -528,6 +750,10 @@ export default function PartnerDetail() {
         {tab === 'staff' && !isNew && <StaffTab partnerId={partnerId!} />}
         {tab === 'contacts' && !isNew && <ContactsTab partnerId={partnerId!} />}
         {tab === 'vehicles' && !isNew && <VehiclesTab partnerId={partnerId!} />}
+        {tab === 'teams' && !isNew && <TeamsTab partnerId={partnerId!} />}
+        {tab === 'services' && !isNew && <ServicesTab partnerId={partnerId!} />}
+        {tab === 'email_templates' && !isNew && <EmailTemplatesTab partnerId={partnerId!} />}
+        {tab === 'operation_info' && !isNew && <OperationInfoTab partnerId={partnerId!} />}
       </div>
     </div>
   )

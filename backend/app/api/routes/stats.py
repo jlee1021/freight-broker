@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 from app.core.database import get_db
 from app.models.load import Load, CarrierSegment
-from app.models.invoice import CustomerInvoice
+from app.models.invoice import CustomerInvoice, CarrierPayable
 from app.models.partner import Partner
 
 router = APIRouter()
@@ -374,4 +374,72 @@ def reports_by_lane(
         }
         for (o, d), v in agg.items()
     ]
+    return {"items": items}
+
+
+@router.get("/ap-summary")
+def get_ap_summary(db: Session = Depends(get_db)):
+    """AP(미지급) 요약: 전체/미지급/연체."""
+    total_ap = db.query(func.coalesce(func.sum(CarrierPayable.amount), 0)).scalar() or 0
+    unpaid_ap = db.query(func.coalesce(func.sum(CarrierPayable.amount), 0)).filter(
+        CarrierPayable.status.in_(["draft", "sent"])
+    ).scalar() or 0
+    overdue_ap = db.query(func.count(CarrierPayable.id)).filter(
+        CarrierPayable.status.in_(["draft", "sent"])
+    ).scalar() or 0
+    return {
+        "total_ap": round(float(total_ap), 2),
+        "unpaid_ap": round(float(unpaid_ap), 2),
+        "overdue_ap_count": overdue_ap,
+    }
+
+
+@router.get("/profit-by-customer")
+def get_profit_by_customer(
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    customer_id: str | None = Query(None),
+    period: str | None = Query("month", description="month or week"),
+    db: Session = Depends(get_db),
+):
+    """Profit 고객별 + 기간별 상세."""
+    q = db.query(Load).options(joinedload(Load.customer)).filter(Load.status != "cancel")
+    if date_from:
+        q = q.filter(Load.created_at >= date_from)
+    if date_to:
+        q = q.filter(Load.created_at <= date_to)
+    if customer_id:
+        try:
+            q = q.filter(Load.customer_id == UUID(customer_id))
+        except ValueError:
+            pass
+    loads = q.all()
+
+    items = []
+    for l in loads:
+        rev = float(l.revenue or 0)
+        cost = float(l.cost or 0)
+        profit = rev - cost
+        margin = round(profit / rev * 100, 1) if rev else None
+        created = str(l.created_at) if l.created_at else None
+        period_label = ""
+        if l.created_at:
+            d = l.created_at if hasattr(l.created_at, "strftime") else date.fromisoformat(str(l.created_at))
+            try:
+                period_label = d.strftime("%Y-%m") if period == "month" else d.strftime("%Y-W%V")
+            except Exception:
+                period_label = str(l.created_at)[:7]
+        items.append({
+            "load_id": str(l.id),
+            "load_number": l.load_number,
+            "date": created,
+            "period": period_label,
+            "status": l.status,
+            "customer_id": str(l.customer_id) if l.customer_id else None,
+            "customer_name": l.customer.name if l.customer else "No customer",
+            "revenue": round(rev, 2),
+            "cost": round(cost, 2),
+            "profit": round(profit, 2),
+            "margin": margin,
+        })
     return {"items": items}

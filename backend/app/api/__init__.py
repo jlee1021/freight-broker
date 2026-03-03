@@ -4,6 +4,9 @@ from .routes import (
     stats, documents, settings, inventory, invoices, tenders, master,
     partner_ext, account, consolidation, edi,
 )
+from .routes.os_orders import router as os_orders_router
+from .routes.osd import router as osd_router
+from .routes.partner_extra_routes import router as partner_extra_router
 from .deps import get_current_user
 
 router = APIRouter()
@@ -18,6 +21,8 @@ protected.include_router(load_notes.router, prefix="/loads", tags=["loads"])
 protected.include_router(loads.router, prefix="/loads", tags=["loads"])
 protected.include_router(tenders.router, prefix="/loads", tags=["tenders"])
 protected.include_router(partners.router, prefix="/partners", tags=["partners"])
+protected.include_router(partner_ext.router, prefix="/partners", tags=["partners"])
+protected.include_router(partner_extra_router, prefix="/partners", tags=["partners"])
 protected.include_router(users.router, prefix="/users", tags=["users"])
 protected.include_router(stats.router, prefix="/stats", tags=["stats"])
 protected.include_router(documents.router, prefix="/documents", tags=["documents"])
@@ -25,8 +30,9 @@ protected.include_router(settings.router)
 protected.include_router(inventory.router, prefix="/inventory", tags=["inventory"])
 protected.include_router(invoices.router)
 protected.include_router(master.router, prefix="/master", tags=["master"])
-protected.include_router(partner_ext.router, prefix="/partners", tags=["partners"])
 protected.include_router(account.router, prefix="/account", tags=["account"])
 protected.include_router(consolidation.router, prefix="/consolidations", tags=["consolidation"])
 protected.include_router(edi.router, prefix="/edi", tags=["edi"])
+protected.include_router(os_orders_router, prefix="/os-orders", tags=["os-orders"])
+protected.include_router(osd_router, prefix="/osd", tags=["osd"])
 router.include_router(protected)

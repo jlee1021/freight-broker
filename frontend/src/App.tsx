@@ -42,6 +42,8 @@ import Reports from './pages/Reports'
 import Setting from './pages/Setting'
 import Consolidation from './pages/Consolidation'
 import Edi from './pages/Edi'
+import OsOrderPage from './pages/OsOrder'
+import OsdPage from './pages/Osd'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const loc = useLocation()
@@ -153,8 +155,9 @@ function SidebarNav() {
         {open.dispatch && (
           <div className="mt-0.5">
             <NavLink to="/order" className={({ isActive }) => subLinkClass('/order') + (isActive ? ' bg-slate-600 text-white' : '')}>Order</NavLink>
+            <NavLink to="/os-orders" className={({ isActive }) => subLinkClass('/os-orders') + (isActive ? ' bg-slate-600 text-white' : '')}>OS List</NavLink>
+            <NavLink to="/osd" className={({ isActive }) => subLinkClass('/osd') + (isActive ? ' bg-slate-600 text-white' : '')}>OSD</NavLink>
             <NavLink to="/consolidation" className={({ isActive }) => subLinkClass('/consolidation') + (isActive ? ' bg-slate-600 text-white' : '')}>Consolidation</NavLink>
-            <NavLink to="/reports" className={({ isActive }) => subLinkClass('/reports') + (isActive ? ' bg-slate-600 text-white' : '')}>OSD</NavLink>
             <NavLink to="/edi" className={({ isActive }) => subLinkClass('/edi') + (isActive ? ' bg-slate-600 text-white' : '')}>EDI</NavLink>
           </div>
         )}
@@ -293,6 +296,8 @@ function AppLayout() {
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/consolidation" element={<Consolidation />} />
             <Route path="/edi" element={<Edi />} />
+            <Route path="/os-orders" element={<OsOrderPage />} />
+            <Route path="/osd" element={<OsdPage />} />
             <Route path="/setting" element={<RequireAdmin><Setting /></RequireAdmin>} />
           </Routes>
         </PageErrorBoundary>

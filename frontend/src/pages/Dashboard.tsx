@@ -12,6 +12,8 @@ import {
 } from 'recharts'
 import { apiJson } from '../api'
 
+type ApSummary = { total_ap: number; unpaid_ap: number; overdue_ap_count: number }
+
 type DashboardStats = {
   total_loads: number
   by_status: Record<string, number>
@@ -120,6 +122,7 @@ function getDateRange(period: string): { date_from: string; date_to: string } | 
 export default function Dashboard() {
   const [period, setPeriod] = useState('')
   const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [apSummary, setApSummary] = useState<ApSummary | null>(null)
   const [trend, setTrend] = useState<TrendItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -154,6 +157,10 @@ export default function Dashboard() {
       .then((data) => setTrend(data.items || []))
       .catch(() => setTrend([]))
   }, [period, range?.date_from, range?.date_to])
+
+  useEffect(() => {
+    apiJson<ApSummary>('/stats/ap-summary').then(setApSummary).catch(() => {})
+  }, [])
 
   const load = () => {
     setError(null)
@@ -239,6 +246,25 @@ export default function Dashboard() {
               </li>
             )}
           </ul>
+        </div>
+      )}
+
+      {/* AP 요약 블록 */}
+      {apSummary && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link to="/account/ap" className="card flex flex-col gap-1 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total AP (CAD)</span>
+            <div className="text-2xl font-bold text-gray-800">{apSummary.total_ap.toLocaleString()}</div>
+          </Link>
+          <Link to="/account/ap" className="card flex flex-col gap-1 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Unpaid AP (CAD)</span>
+            <div className="text-2xl font-bold text-rose-700">{apSummary.unpaid_ap.toLocaleString()}</div>
+          </Link>
+          <Link to="/account/ap" className="card flex flex-col gap-1 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Unpaid AP Count</span>
+            <div className="text-2xl font-bold text-amber-700">{apSummary.overdue_ap_count}</div>
+            <span className="text-sm text-blue-600 hover:underline">View AP →</span>
+          </Link>
         </div>
       )}
 
@@ -406,7 +432,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="period" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
-                <Tooltip formatter={(v: number) => v.toLocaleString()} labelFormatter={(l) => `Period: ${l}`} />
+                <Tooltip formatter={(v: number | string | undefined) => (v != null ? Number(v).toLocaleString() : '–')} labelFormatter={(l) => `Period: ${l}`} />
                 <Legend />
                 <Bar dataKey="revenue" name="Revenue" fill="#059669" radius={[2, 2, 0, 0]} />
                 <Bar dataKey="cost" name="Cost" fill="#e11d48" radius={[2, 2, 0, 0]} />

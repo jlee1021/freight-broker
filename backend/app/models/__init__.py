@@ -9,9 +9,11 @@ from .invoice import CustomerInvoice, CarrierPayable
 from .tender import Tender
 from .master import City, TypeMaster, SubTypeMaster, Permission
 from .partner_ext import PartnerLocation, PartnerStaff, CarrierContact, CarrierVehicle
+from .partner_extra import PartnerTeam, PartnerService, PartnerEmailTemplate, CarrierOperationInfo, LocationStaff, LocationContact, LocationEquipment
 from .account import ItemType, Expense, ExpenseDetail, DebitCredit
 from .consolidation import Consolidation, ConsolidationShipper, ConsolidationConsignee
 from .edi import EdiConfig, EdiRecord
+from .os_osd import OsOrder, OsdRecord
 
 __all__ = [
     "Base",
@@ -39,6 +41,13 @@ __all__ = [
     "PartnerStaff",
     "CarrierContact",
     "CarrierVehicle",
+    "PartnerTeam",
+    "PartnerService",
+    "PartnerEmailTemplate",
+    "CarrierOperationInfo",
+    "LocationStaff",
+    "LocationContact",
+    "LocationEquipment",
     "ItemType",
     "Expense",
     "ExpenseDetail",
@@ -48,4 +57,6 @@ __all__ = [
     "ConsolidationConsignee",
     "EdiConfig",
     "EdiRecord",
+    "OsOrder",
+    "OsdRecord",
 ]

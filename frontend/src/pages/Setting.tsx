@@ -299,6 +299,43 @@ function PermissionTab() {
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search permission..." className="border rounded px-3 py-1.5 text-sm flex-1" />
         <button onClick={openAdd} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700">+ Add</button>
       </div>
+      {/* CRUD 매트릭스 뷰 */}
+      {filtered.length > 0 && (() => {
+        const resources = [...new Set(filtered.map(p => p.resource).filter(Boolean))]
+        const actions = ['read', 'write', 'delete', 'manage']
+        if (resources.length > 0) {
+          return (
+            <div className="mb-4 overflow-x-auto">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">CRUD Matrix</h3>
+              <table className="text-xs border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border px-3 py-2 text-left w-36">Resource</th>
+                    {actions.map(a => <th key={a} className="border px-3 py-2 text-center capitalize w-20">{a}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {resources.map(res => (
+                    <tr key={res} className="hover:bg-gray-50">
+                      <td className="border px-3 py-1.5 font-medium">{res}</td>
+                      {actions.map(act => {
+                        const has = filtered.some(p => p.resource === res && p.action === act && p.is_active)
+                        return (
+                          <td key={act} className="border px-3 py-1.5 text-center">
+                            {has ? <span className="text-green-600 font-bold">✓</span> : <span className="text-gray-300">–</span>}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
+        return null
+      })()}
+
       <table className="w-full text-sm border-collapse">
         <thead><tr className="bg-gray-50 text-left">
           <th className="border px-3 py-2">Permission Name</th><th className="border px-3 py-2">Resource</th><th className="border px-3 py-2">Action</th>
