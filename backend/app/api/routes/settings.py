@@ -16,7 +16,11 @@ settings = get_settings()
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
-DEFAULT_KEYS = ["tax_code_default", "default_fsc_percent", "company_name", "company_address", "company_mc", "company_dot", "default_equipment_types", "company_logo_url"]
+DEFAULT_KEYS = [
+    "tax_code_default", "default_fsc_percent", "company_name", "company_address",
+    "company_mc", "company_dot", "default_equipment_types", "company_logo_url",
+    "ar_reminder_days", "ar_reminder_repeat_days",
+]
 DEFAULTS = {
     "tax_code_default": "GST",
     "default_fsc_percent": "0",
@@ -26,6 +30,8 @@ DEFAULTS = {
     "company_dot": "",
     "default_equipment_types": "Dry Van,Reefer,Flatbed,Step Deck",
     "company_logo_url": "",
+    "ar_reminder_days": "0",       # 0 = 비활성화, 30 = 30일 경과 후 발송
+    "ar_reminder_repeat_days": "0", # 0 = 반복 없음, 7 = 7일마다 반복
 }
 
 
@@ -37,7 +43,7 @@ def _get_value(db: Session, key: str) -> str:
 
 
 @router.get("", response_model=SettingResponse)
-def get_settings(db: Session = Depends(get_db)):
+def get_app_settings(db: Session = Depends(get_db)):
     return SettingResponse(
         tax_code_default=_get_value(db, "tax_code_default"),
         default_fsc_percent=_get_value(db, "default_fsc_percent"),
@@ -47,6 +53,8 @@ def get_settings(db: Session = Depends(get_db)):
         company_dot=_get_value(db, "company_dot"),
         default_equipment_types=_get_value(db, "default_equipment_types"),
         company_logo_url=_get_value(db, "company_logo_url"),
+        ar_reminder_days=_get_value(db, "ar_reminder_days"),
+        ar_reminder_repeat_days=_get_value(db, "ar_reminder_repeat_days"),
     )
 
 
@@ -63,7 +71,15 @@ def update_settings(payload: SettingUpdate, db: Session = Depends(get_db)):
         else:
             db.add(Setting(key=key, value=str_val))
     db.commit()
-    return get_settings(db)
+    return get_app_settings(db)
+
+
+@router.post("/run-reminder", dependencies=[])
+def run_reminder_now(_user: User = Depends(require_roles(["admin", "billing"]))):
+    """AR 리마인더 즉시 실행 (테스트 또는 수동 발송)"""
+    from app.services.reminder import run_reminder_job
+    result = run_reminder_job()
+    return result
 
 
 class TestEmailBody(BaseModel):

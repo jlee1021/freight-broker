@@ -1,5 +1,5 @@
-from sqlalchemy import Column, String, Text, Boolean, Date
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, Text, Boolean, Date, DateTime, Integer
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
 
@@ -36,6 +36,23 @@ class Partner(Base):
     dot_number = Column(String(50), nullable=True)
     insurance_expiry = Column(Date, nullable=True)
     payment_terms = Column(String(100), nullable=True)
+    # A2 확장 필드
+    code = Column(String(50), nullable=True)
+    legal_name = Column(String(255), nullable=True)
+    operating_status = Column(String(100), nullable=True)
+    carrier_type = Column(String(100), nullable=True)
+    service_hours = Column(String(100), nullable=True)
+    mc_status = Column(String(50), nullable=True)
+    hazmat_carrier = Column(Boolean, default=False, nullable=True)
+    w9_received = Column(Boolean, default=False, nullable=True)
+    default_tax_code = Column(String(20), nullable=True)
+    payment_days = Column(Integer, nullable=True)
+    payment_type = Column(String(50), nullable=True)
+    ach_eft_banking = Column(String(255), nullable=True)
+    factor_company_name = Column(String(255), nullable=True)
+    personal_message = Column(Text, nullable=True)
+    bill_to = Column(String(255), nullable=True)
+    created_at = Column(DateTime, nullable=True)
 
     loads_as_customer = relationship("Load", back_populates="customer")
     carrier_segments = relationship("CarrierSegment", back_populates="carrier")

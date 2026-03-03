@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { apiJson, apiFetch, buildUrl } from '../api'
+import { apiJson, apiFetch } from '../api'
 
 type ReportItem = { id: string; name: string; revenue?: number; cost: number; profit?: number; load_count: number }
 type CarrierPerf = { carrier_id: string; name: string; average_rating: number | null; on_time_count: number; total_loads: number; on_time_pct: number | null }

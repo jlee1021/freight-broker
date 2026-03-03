@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { apiJson } from '../api'
 
 type Partner = {
@@ -16,9 +16,17 @@ type Partner = {
 }
 
 export default function Partner() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const typeFromUrl = (searchParams.get('type') || '').toLowerCase()
   const [partners, setPartners] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
-  const [typeFilter, setTypeFilter] = useState<string>('')
+  const [typeFilter, setTypeFilter] = useState<string>(typeFromUrl === 'customer' || typeFromUrl === 'carrier' ? typeFromUrl : '')
+
+  useEffect(() => {
+    const t = (searchParams.get('type') || '').toLowerCase()
+    if (t === 'customer' || t === 'carrier') setTypeFilter(t)
+    else setTypeFilter('')
+  }, [searchParams])
 
   useEffect(() => {
     apiJson('/partners')
@@ -46,19 +54,19 @@ export default function Partner() {
       </div>
       <div className="flex gap-2 mb-4">
         <button
-          onClick={() => setTypeFilter('')}
+          onClick={() => { setTypeFilter(''); setSearchParams({}) }}
           className={`px-3 py-1.5 rounded ${!typeFilter ? 'bg-red-600 text-white' : 'bg-white border'}`}
         >
           All
         </button>
         <button
-          onClick={() => setTypeFilter('customer')}
+          onClick={() => { setTypeFilter('customer'); setSearchParams({ type: 'customer' }) }}
           className={`px-3 py-1.5 rounded ${typeFilter === 'customer' ? 'bg-red-600 text-white' : 'bg-white border'}`}
         >
           Customer
         </button>
         <button
-          onClick={() => setTypeFilter('carrier')}
+          onClick={() => { setTypeFilter('carrier'); setSearchParams({ type: 'carrier' }) }}
           className={`px-3 py-1.5 rounded ${typeFilter === 'carrier' ? 'bg-red-600 text-white' : 'bg-white border'}`}
         >
           Carrier

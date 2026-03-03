@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Numeric, ForeignKey, Date, DateTime, Enum
+from sqlalchemy import Column, String, Numeric, Integer, ForeignKey, Date, DateTime, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -27,6 +27,8 @@ class CustomerInvoice(Base):
     sent_at = Column(DateTime, nullable=True)
     paid_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    last_reminder_sent_at = Column(DateTime, nullable=True)
+    reminder_sent_count = Column(Integer, default=0, nullable=False)
 
     load = relationship("Load", back_populates="customer_invoices")
     customer = relationship("Partner", back_populates="customer_invoices")

@@ -110,7 +110,6 @@ def main():
     print("Starting backend (uvicorn in background) ...")
     client.exec_command(
         f"cd {REMOTE_DIR}/backend && source .venv/bin/activate && "
-        f"export DATABASE_URL={DB_URL} && "
         f"nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > /home/john/backend.log 2>&1 &",
         get_pty=False,
     )

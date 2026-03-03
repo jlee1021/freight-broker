@@ -29,6 +29,8 @@ class CustomerInvoiceResponse(BaseModel):
     created_at: Optional[datetime] = None
     load_number: Optional[str] = None
     customer_name: Optional[str] = None
+    last_reminder_sent_at: Optional[datetime] = None
+    reminder_sent_count: int = 0
 
     class Config:
         from_attributes = True

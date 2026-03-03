@@ -13,7 +13,6 @@ except Exception:
     _WEASYPRINT_AVAILABLE = False
 
 from app.core.database import get_db
-from app.core.config import get_settings
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.load import Load
@@ -64,6 +63,8 @@ def _ci_to_response(ci: CustomerInvoice) -> CustomerInvoiceResponse:
         created_at=ci.created_at,
         load_number=load_number,
         customer_name=customer_name,
+        last_reminder_sent_at=getattr(ci, "last_reminder_sent_at", None),
+        reminder_sent_count=getattr(ci, "reminder_sent_count", 0) or 0,
     )
 
 

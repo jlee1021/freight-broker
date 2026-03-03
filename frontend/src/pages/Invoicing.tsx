@@ -11,6 +11,8 @@ type CustomerInvoice = {
   due_date: string | null
   load_number: string | null
   customer_name: string | null
+  last_reminder_sent_at: string | null
+  reminder_sent_count: number
 }
 type CarrierPayable = {
   id: string
@@ -23,7 +25,9 @@ type CarrierPayable = {
 }
 type Load = { id: string; load_number: string; revenue: number | null }
 
-export default function Invoicing() {
+type ViewMode = 'ar' | 'ap' | 'all'
+
+export default function Invoicing({ viewMode = 'all' }: { viewMode?: ViewMode }) {
   const [ar, setAr] = useState<CustomerInvoice[]>([])
   const [ap, setAp] = useState<CarrierPayable[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,14 +36,21 @@ export default function Invoicing() {
   const [arFilter, setArFilter] = useState<'all' | 'overdue'>('all')
 
   const load = () => {
+    const needAr = viewMode === 'ar' || viewMode === 'all'
+    const needAp = viewMode === 'ap' || viewMode === 'all'
     const arUrl = arFilter === 'overdue' ? '/invoices/customer?overdue=true' : '/invoices/customer'
-    apiJson<CustomerInvoice[]>(arUrl)
-      .then((list) => setAr(Array.isArray(list) ? list : []))
-      .catch(() => setAr([]))
-    apiJson<CarrierPayable[]>('/invoices/carrier')
-      .then((list) => setAp(Array.isArray(list) ? list : []))
-      .catch(() => setAp([]))
-      .finally(() => setLoading(false))
+    if (needAr) {
+      apiJson<CustomerInvoice[]>(arUrl)
+        .then((list) => setAr(Array.isArray(list) ? list : []))
+        .catch(() => setAr([]))
+    }
+    if (needAp) {
+      apiJson<CarrierPayable[]>('/invoices/carrier')
+        .then((list) => setAp(Array.isArray(list) ? list : []))
+        .catch(() => setAp([]))
+        .finally(() => setLoading(false))
+    }
+    if (!needAp) setLoading(false)
   }
 
   useEffect(() => { load() }, [arFilter])
@@ -72,10 +83,14 @@ export default function Invoicing() {
 
   if (loading) return <div className="p-4">Loading...</div>
 
+  const showAr = viewMode === 'ar' || viewMode === 'all'
+  const showAp = viewMode === 'ap' || viewMode === 'all'
+
   return (
     <div className="space-y-8">
-      <h1 className="page-title">Invoicing</h1>
+      <h1 className="page-title">{viewMode === 'ar' ? 'AR List' : viewMode === 'ap' ? 'AP List' : 'Invoicing'}</h1>
 
+      {showAr && (
       <section className="card">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-2">
@@ -114,12 +129,13 @@ export default function Invoicing() {
               <th className="px-3 py-2 text-left">Amount</th>
               <th className="px-3 py-2 text-left">Due</th>
               <th className="px-3 py-2 text-left">Status</th>
+              <th className="px-3 py-2 text-left">Last Reminder</th>
               <th className="px-3 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {ar.length === 0 ? (
-              <tr><td colSpan={7} className="px-3 py-4 text-gray-500 text-center">No customer invoices.</td></tr>
+              <tr><td colSpan={8} className="px-3 py-4 text-gray-500 text-center">No customer invoices.</td></tr>
             ) : (
               ar.map((i) => {
                 const isOverdue = i.due_date && (i.status === 'draft' || i.status === 'sent') && new Date(i.due_date) < new Date()
@@ -131,6 +147,11 @@ export default function Invoicing() {
                   <td className="px-3 py-2">{Number(i.amount).toLocaleString()}</td>
                   <td className="px-3 py-2">{i.due_date ?? '-'}</td>
                   <td className="px-3 py-2">{i.status}</td>
+                  <td className="px-3 py-2 text-xs text-gray-500">
+                    {i.last_reminder_sent_at
+                      ? <span title={`${i.reminder_sent_count}회 발송`}>{new Date(i.last_reminder_sent_at).toLocaleDateString()}<br/><span className="text-gray-400">{i.reminder_sent_count}회</span></span>
+                      : '-'}
+                  </td>
                   <td className="px-3 py-2 flex gap-1 flex-wrap">
                     <button type="button" onClick={async () => { const r = await apiFetch(`/invoices/customer/${i.id}/document`); const html = await r.text(); const w = window.open('', '_blank'); if (w) { w.document.write(html); w.document.close() } }} className="text-sm text-blue-600 hover:underline">View</button>
                     <button type="button" onClick={async () => { const r = await apiFetch(`/invoices/customer/${i.id}/document/pdf`); const blob = await r.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Invoice-${i.invoice_number}.pdf`; a.click(); URL.revokeObjectURL(url) }} className="text-sm text-blue-600 hover:underline">PDF</button>
@@ -161,7 +182,9 @@ export default function Invoicing() {
         </table>
         </div>
       </section>
+      )}
 
+      {showAp && (
       <section className="card">
         <h2 className="text-lg font-semibold mb-4">AP – Carrier Payables</h2>
         <div className="table-wrap">
@@ -199,6 +222,7 @@ export default function Invoicing() {
         </table>
         </div>
       </section>
+      )}
     </div>
   )
 }

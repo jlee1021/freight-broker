@@ -1,5 +1,7 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -62,22 +64,51 @@ def delete_warehouse(warehouse_id: UUID, db: Session = Depends(get_db)):
 
 
 # Inventory items
+@router.get("/items", response_model=list[InventoryItemResponse])
+def list_all_items(
+    q: Optional[str] = None,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+):
+    """전체 창고 아이템 목록 (검색·날짜 필터 지원)."""
+    query = db.query(InventoryItem)
+    if q:
+        query = query.filter(InventoryItem.name.ilike(f"%{q}%") | InventoryItem.sku.ilike(f"%{q}%"))
+    if from_date:
+        query = query.filter(InventoryItem.entry_date >= from_date)
+    if to_date:
+        query = query.filter(InventoryItem.entry_date <= to_date)
+    return query.order_by(InventoryItem.entry_date.desc().nullslast()).all()
+
+
 @router.get("/warehouses/{warehouse_id}/items", response_model=list[InventoryItemResponse])
-def list_items(warehouse_id: UUID, db: Session = Depends(get_db)):
+def list_items(
+    warehouse_id: UUID,
+    q: Optional[str] = None,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+):
     if not db.query(Warehouse).filter(Warehouse.id == warehouse_id).first():
         raise HTTPException(status_code=404, detail="Warehouse not found")
-    return db.query(InventoryItem).filter(InventoryItem.warehouse_id == warehouse_id).all()
+    query = db.query(InventoryItem).filter(InventoryItem.warehouse_id == warehouse_id)
+    if q:
+        query = query.filter(InventoryItem.name.ilike(f"%{q}%") | InventoryItem.sku.ilike(f"%{q}%"))
+    if from_date:
+        query = query.filter(InventoryItem.entry_date >= from_date)
+    if to_date:
+        query = query.filter(InventoryItem.entry_date <= to_date)
+    return query.order_by(InventoryItem.entry_date.desc().nullslast()).all()
 
 
-@router.post("/warehouses/{warehouse_id}/items", response_model=InventoryItemResponse)
+@router.post("/warehouses/{warehouse_id}/items", response_model=InventoryItemResponse, status_code=201)
 def create_item(warehouse_id: UUID, payload: InventoryItemCreate, db: Session = Depends(get_db)):
     if not db.query(Warehouse).filter(Warehouse.id == warehouse_id).first():
         raise HTTPException(status_code=404, detail="Warehouse not found")
     item = InventoryItem(
         warehouse_id=warehouse_id,
-        sku=payload.sku,
-        name=payload.name,
-        quantity=payload.quantity or 0,
+        **payload.model_dump(),
     )
     db.add(item)
     db.commit()

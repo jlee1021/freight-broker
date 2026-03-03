@@ -11,6 +11,8 @@ class SettingUpdate(BaseModel):
     company_dot: Optional[str] = None
     default_equipment_types: Optional[str] = None
     company_logo_url: Optional[str] = None
+    ar_reminder_days: Optional[str] = None
+    ar_reminder_repeat_days: Optional[str] = None
 
 
 class SettingResponse(BaseModel):
@@ -22,3 +24,5 @@ class SettingResponse(BaseModel):
     company_dot: str
     default_equipment_types: str
     company_logo_url: str
+    ar_reminder_days: str = "0"
+    ar_reminder_repeat_days: str = "0"

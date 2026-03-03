@@ -16,3 +16,6 @@ pydantic-settings==2.6.1
 
 # PDF (문서 다운로드)
 weasyprint>=62.0
+
+# 스케줄러 (AR 리마인더 자동화)
+apscheduler>=3.10.0

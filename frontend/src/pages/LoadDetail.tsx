@@ -1,6 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { apiJson, apiFetch } from '../api'
+
+type Tender = {
+  id: string
+  load_id: string
+  carrier_id: string
+  carrier_name: string | null
+  status: string
+  message: string | null
+  rate_offered: number | null
+  reject_reason: string | null
+  sent_at: string | null
+  responded_at: string | null
+}
 
 type Partner = { id: string; name: string; type: string | null }
 type User = { id: string; email: string; full_name: string | null; role: string | null }
@@ -117,6 +130,17 @@ export default function LoadDetail() {
   const [uploading, setUploading] = useState(false)
   const [emailModal, setEmailModal] = useState<{ docType: string; toEmail: string } | null>(null)
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [tenders, setTenders] = useState<Tender[]>([])
+  const [tenderModal, setTenderModal] = useState(false)
+  const [tenderForm, setTenderForm] = useState({ carrier_id: '', message: '', rate_offered: '' })
+  const [sendingTender, setSendingTender] = useState(false)
+
+  const loadTenders = useCallback(() => {
+    if (!loadId || isNew) return
+    apiJson<{items: Tender[]}>(`/loads/${loadId}/tenders`)
+      .then((d) => setTenders(d.items || []))
+      .catch(() => setTenders([]))
+  }, [loadId, isNew])
 
   useEffect(() => {
     Promise.all([
@@ -126,7 +150,8 @@ export default function LoadDetail() {
       setPartners(Array.isArray(pList) ? pList : [])
       setUsers(Array.isArray(uList) ? uList : [])
     })
-  }, [])
+    loadTenders()
+  }, [loadTenders])
 
   useEffect(() => {
     if (isNew) {
@@ -684,6 +709,149 @@ export default function LoadDetail() {
           </div>
         ))}
       </section>
+
+      {/* Tender Workflow */}
+      {!isNew && (
+        <section className="bg-white rounded-lg shadow p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-semibold">Tender to Carrier</h2>
+            <button
+              type="button"
+              onClick={() => { setTenderForm({ carrier_id: '', message: '', rate_offered: '' }); setTenderModal(true) }}
+              className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              + Send Tender
+            </button>
+          </div>
+          {tenders.length === 0 ? (
+            <p className="text-sm text-gray-400">No tenders sent yet.</p>
+          ) : (
+            <div className="table-wrap">
+              <table className="min-w-full text-sm">
+                <thead className="table-header">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Carrier</th>
+                    <th className="px-3 py-2 text-left">Rate Offered</th>
+                    <th className="px-3 py-2 text-left">Status</th>
+                    <th className="px-3 py-2 text-left">Sent At</th>
+                    <th className="px-3 py-2 text-left">Responded</th>
+                    <th className="px-3 py-2 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tenders.map((t) => (
+                    <tr key={t.id} className="border-t">
+                      <td className="px-3 py-2">{t.carrier_name || t.carrier_id}</td>
+                      <td className="px-3 py-2">{t.rate_offered ? `$${Number(t.rate_offered).toLocaleString()}` : '-'}</td>
+                      <td className="px-3 py-2">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          t.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                          t.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          t.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                          t.status === 'cancelled' ? 'bg-gray-100 text-gray-500' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>{t.status}</span>
+                        {t.reject_reason && <span className="ml-1 text-xs text-gray-400">({t.reject_reason})</span>}
+                      </td>
+                      <td className="px-3 py-2 text-gray-500">{t.sent_at ? new Date(t.sent_at).toLocaleDateString() : '-'}</td>
+                      <td className="px-3 py-2 text-gray-500">{t.responded_at ? new Date(t.responded_at).toLocaleDateString() : '-'}</td>
+                      <td className="px-3 py-2">
+                        {(t.status === 'pending' || t.status === 'sent') && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm('Cancel this tender?')) return
+                              await apiFetch(`/loads/${loadId}/tenders/${t.id}`, { method: 'DELETE' })
+                              loadTenders()
+                            }}
+                            className="text-xs text-red-600 hover:underline"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Tender Modal */}
+          {tenderModal && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                <h3 className="text-lg font-semibold mb-4">Send Tender to Carrier</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Carrier *</label>
+                    <select
+                      value={tenderForm.carrier_id}
+                      onChange={(e) => setTenderForm((f) => ({ ...f, carrier_id: e.target.value }))}
+                      className="w-full border rounded px-3 py-2"
+                    >
+                      <option value="">-- Select Carrier --</option>
+                      {partners.filter((p) => p.type === 'carrier' || p.type === 'Carrier').map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Rate Offered (optional)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 1500.00"
+                      value={tenderForm.rate_offered}
+                      onChange={(e) => setTenderForm((f) => ({ ...f, rate_offered: e.target.value }))}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Message (optional)</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Additional notes for the carrier..."
+                      value={tenderForm.message}
+                      onChange={(e) => setTenderForm((f) => ({ ...f, message: e.target.value }))}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-5">
+                  <button type="button" onClick={() => setTenderModal(false)} className="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+                  <button
+                    type="button"
+                    disabled={!tenderForm.carrier_id || sendingTender}
+                    onClick={async () => {
+                      setSendingTender(true)
+                      try {
+                        await apiFetch(`/loads/${loadId}/tenders`, {
+                          method: 'POST',
+                          body: JSON.stringify({
+                            carrier_id: tenderForm.carrier_id,
+                            message: tenderForm.message || null,
+                            rate_offered: tenderForm.rate_offered ? Number(tenderForm.rate_offered) : null,
+                          }),
+                        })
+                        setTenderModal(false)
+                        loadTenders()
+                        alert('Tender sent successfully.')
+                      } catch (e) {
+                        alert(e instanceof Error ? e.message : 'Failed to send tender')
+                      }
+                      setSendingTender(false)
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {sendingTender ? 'Sending...' : 'Send Tender'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* References */}
       <section className="bg-white rounded-lg shadow p-4">

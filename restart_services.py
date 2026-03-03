@@ -1,31 +1,49 @@
-"""Restart backend and frontend on Ubuntu server after deploy."""
+"""Uploaded code already on server - just restart backend and frontend."""
 import paramiko
 import time
 
 HOST = "192.168.111.137"
 USER = "john"
 PASSWORD = "1234"
-REMOTE = "/home/john/freight-broker"
-DB_URL = "postgresql://postgres:postgres@localhost:5433/freight_broker"
+PORT = 22
 
-client = paramiko.SSHClient()
-client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client.connect(HOST, username=USER, password=PASSWORD, timeout=10)
+c = paramiko.SSHClient()
+c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+c.connect(HOST, port=PORT, username=USER, password=PASSWORD, timeout=10)
 
-def run(cmd, timeout=15):
-    stdin, stdout, stderr = client.exec_command(cmd, timeout=timeout)
-    return stdout.read().decode() + stderr.read().decode()
+def run(cmd, label, timeout=15):
+    print(f"[SSH] {label}")
+    stdin, stdout, stderr = c.exec_command(cmd, timeout=timeout)
+    try:
+        out = stdout.read().decode(errors="replace")
+        if out.strip():
+            for line in out.strip().splitlines()[:20]:
+                print(f"  {line}")
+    except Exception as e:
+        print(f"  (timeout or error: {e})")
 
-print("Stopping old backend and frontend...")
-run("pkill -f 'uvicorn app.main' 2>/dev/null; pkill -f 'node.*vite' 2>/dev/null; sleep 2")
-print("Starting backend...")
-run(f"cd {REMOTE}/backend && source .venv/bin/activate && export DATABASE_URL={DB_URL} && nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > /home/john/backend.log 2>&1 &")
-time.sleep(2)
-print("Starting frontend...")
-run(f"cd {REMOTE}/frontend && nohup npm run dev >> /home/john/frontend.log 2>&1 &")
-time.sleep(5)
-print("Checking ports...")
-out = run("ss -tlnp 2>/dev/null | grep -E '8000|5173'")
-print(out or "(none)")
-client.close()
-print("Done. Backend: http://192.168.111.137:8000  Frontend: http://192.168.111.137:5173")
+# Kill existing
+run("pkill -f uvicorn 2>/dev/null; pkill -f 'vite' 2>/dev/null; sleep 2", "Kill old processes")
+
+# Backend
+run(
+    "cd /home/john/freight-broker/backend && source .venv/bin/activate && "
+    "export DATABASE_URL=postgresql://postgres:postgres@localhost:5433/freight_broker && "
+    "nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > /home/john/backend.log 2>&1 &",
+    "Start backend"
+)
+time.sleep(4)
+
+# Frontend (background, no wait)
+run(
+    "cd /home/john/freight-broker/frontend && nohup npm run dev -- --host 0.0.0.0 > /home/john/frontend.log 2>&1 &",
+    "Start frontend",
+    timeout=5
+)
+time.sleep(3)
+
+run("pgrep -fa uvicorn || echo no uvicorn", "Backend check")
+run("pgrep -fa vite || echo no vite", "Frontend check")
+
+c.close()
+print("Done. Frontend may take 30-60s to be ready (npm run dev).")
