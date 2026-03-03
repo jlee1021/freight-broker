@@ -35,6 +35,12 @@ class PartnerBase(BaseModel):
     factor_company_name: Optional[str] = None
     personal_message: Optional[str] = None
     bill_to: Optional[str] = None
+    credit_limit: Optional[int] = None
+    truck_calls: Optional[int] = None
+    account_type: Optional[str] = None
+    discount_pct: Optional[int] = None
+    currency: Optional[str] = None
+    expense_terms: Optional[str] = None
 
 
 class PartnerCreate(PartnerBase):
@@ -72,6 +78,12 @@ class PartnerUpdate(BaseModel):
     personal_message: Optional[str] = None
     bill_to: Optional[str] = None
     is_active: Optional[bool] = None
+    credit_limit: Optional[int] = None
+    truck_calls: Optional[int] = None
+    account_type: Optional[str] = None
+    discount_pct: Optional[int] = None
+    currency: Optional[str] = None
+    expense_terms: Optional[str] = None
 
 
 class PartnerResponse(PartnerBase):

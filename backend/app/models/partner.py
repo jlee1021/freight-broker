@@ -53,6 +53,13 @@ class Partner(Base):
     personal_message = Column(Text, nullable=True)
     bill_to = Column(String(255), nullable=True)
     created_at = Column(DateTime, nullable=True)
+    # Migration 019 추가 필드
+    credit_limit = Column(Integer, nullable=True)
+    truck_calls = Column(Integer, nullable=True)
+    account_type = Column(String(50), nullable=True)
+    discount_pct = Column(Integer, nullable=True)
+    currency = Column(String(10), nullable=True)
+    expense_terms = Column(String(100), nullable=True)
 
     loads_as_customer = relationship("Load", back_populates="customer")
     carrier_segments = relationship("CarrierSegment", back_populates="carrier")

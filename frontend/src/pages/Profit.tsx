@@ -18,145 +18,136 @@ type ProfitItem = {
 
 type Partner = { id: string; name: string; type: string | null }
 
-const PERIODS = [
-  { value: '', label: 'All time' },
-  { value: '30', label: 'Last 30 days' },
-  { value: '90', label: 'Last 90 days' },
-  { value: 'month', label: 'This month' },
-]
-
-function getRange(period: string): { date_from: string; date_to: string } | null {
-  if (!period) return null
-  const today = new Date()
-  const to = today.toISOString().slice(0, 10)
-  let from: string
-  if (period === 'month') {
-    from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10)
-  } else {
-    const d = new Date(today)
-    d.setDate(d.getDate() - (parseInt(period) || 30) + 1)
-    from = d.toISOString().slice(0, 10)
-  }
-  return { date_from: from, date_to: to }
-}
-
 export default function Profit() {
   const [items, setItems] = useState<ProfitItem[]>([])
   const [customers, setCustomers] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState('month')
   const [customerId, setCustomerId] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  const today = new Date()
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10)
+  const todayStr = today.toISOString().slice(0, 10)
+  const [dateFrom, setDateFrom] = useState(firstOfMonth)
+  const [dateTo, setDateTo] = useState(todayStr)
+  const [nameFilter, setNameFilter] = useState('')
 
   useEffect(() => {
     apiJson<Partner[]>('/partners').then(list => setCustomers(Array.isArray(list) ? list.filter(p => p.type === 'customer' || !p.type) : [])).catch(() => {})
   }, [])
 
-  useEffect(() => {
+  const doSearch = () => {
     setLoading(true); setError(null)
-    const range = getRange(period)
     let url = '/stats/profit-by-customer?'
-    if (range) url += `date_from=${range.date_from}&date_to=${range.date_to}&`
+    if (dateFrom) url += `date_from=${dateFrom}&`
+    if (dateTo) url += `date_to=${dateTo}&`
     if (customerId) url += `customer_id=${customerId}&`
     apiJson<{ items: ProfitItem[] }>(url)
       .then(d => setItems(d.items || []))
       .catch(e => setError(e?.message || 'Failed'))
       .finally(() => setLoading(false))
-  }, [period, customerId])
+  }
 
-  const totals = items.reduce((acc, x) => ({ revenue: acc.revenue + x.revenue, cost: acc.cost + x.cost, profit: acc.profit + x.profit }), { revenue: 0, cost: 0, profit: 0 })
+  useEffect(() => { doSearch() }, [])
+
+  const filteredItems = nameFilter ? items.filter(i => i.customer_name.toLowerCase().includes(nameFilter.toLowerCase())) : items
+  const totals = filteredItems.reduce((acc, x) => ({ revenue: acc.revenue + x.revenue, cost: acc.cost + x.cost, profit: acc.profit + x.profit }), { revenue: 0, cost: 0, profit: 0 })
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="page-title">Profit by Customer</h1>
-        <div className="flex gap-2 flex-wrap">
-          <select value={period} onChange={e => setPeriod(e.target.value)} className="border rounded px-3 py-2 text-sm">
-            {PERIODS.map(p => <option key={p.value || 'all'} value={p.value}>{p.label}</option>)}
-          </select>
-          <select value={customerId} onChange={e => setCustomerId(e.target.value)} className="border rounded px-3 py-2 text-sm">
-            <option value="">All Customers</option>
-            {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-xl font-bold text-gray-800">Profit by Customer</h1>
       </div>
 
-      {/* 요약 카드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="card flex flex-col gap-1">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Revenue (CAD)</span>
-          <div className="text-2xl font-bold text-emerald-700">{totals.revenue.toLocaleString()}</div>
+      {/* 필터 바 */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs text-gray-500">Period Date</span>
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="border rounded px-2 py-1.5 text-xs" />
+        <span className="text-xs text-gray-400">To</span>
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="border rounded px-2 py-1.5 text-xs" />
+        <input value={nameFilter} onChange={e => setNameFilter(e.target.value)} placeholder="Customer name..." className="border rounded px-3 py-1.5 text-xs w-40" />
+        <select value={customerId} onChange={e => setCustomerId(e.target.value)} className="border rounded px-2 py-1.5 text-xs">
+          <option value="">All Customers</option>
+          {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <button onClick={doSearch} className="px-4 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Apply</button>
+        <button onClick={() => { setDateFrom(firstOfMonth); setDateTo(todayStr); setNameFilter(''); setCustomerId('') }} className="px-4 py-1.5 border rounded text-xs hover:bg-gray-50">Clear</button>
+        {/* Totals (right) */}
+        <div className="ml-auto flex gap-4 text-xs text-gray-600">
+          <span>Total Revenue: <strong className="text-emerald-700">${totals.revenue.toLocaleString()}</strong></span>
+          <span>Total Cost: <strong className="text-rose-700">${totals.cost.toLocaleString()}</strong></span>
+          <span>Total Profit: <strong className="text-blue-700">${totals.profit.toLocaleString()}</strong></span>
         </div>
-        <div className="card flex flex-col gap-1">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cost (CAD)</span>
-          <div className="text-2xl font-bold text-rose-700">{totals.cost.toLocaleString()}</div>
-        </div>
-        <div className="card flex flex-col gap-1">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Profit (CAD)</span>
-          <div className="text-2xl font-bold text-blue-700">{totals.profit.toLocaleString()}</div>
-        </div>
-      </div>
-
-      {/* Profit Expense Detail 링크 */}
-      <div className="text-right">
-        <Link to="/profit/expense-detail" className="text-sm text-blue-600 hover:underline font-medium">View Expense Detail →</Link>
       </div>
 
       {error && <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">{error}</div>}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-gray-500">
-          <span className="inline-block w-5 h-5 border-2 border-gray-300 border-t-red-600 rounded-full animate-spin" />
+        <div className="flex items-center gap-2 text-gray-500 p-4">
+          <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
           Loading...
         </div>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="table-header">
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="min-w-full text-xs">
+            <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-4 py-2.5 text-left">Load #</th>
-                <th className="px-4 py-2.5 text-left">Period</th>
-                <th className="px-4 py-2.5 text-left">Customer</th>
-                <th className="px-4 py-2.5 text-left">Status</th>
-                <th className="px-4 py-2.5 text-right">Revenue</th>
-                <th className="px-4 py-2.5 text-right">Cost</th>
-                <th className="px-4 py-2.5 text-right">Profit</th>
-                <th className="px-4 py-2.5 text-right">Margin %</th>
-                <th className="px-4 py-2.5 text-right">Actions</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Date</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Load #</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Customer</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Status</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-600">Revenue</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-600">Expense</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-600">Profit</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-600">Margin %</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {items.length === 0 ? (
+              {filteredItems.length === 0 ? (
                 <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-500">No profit data for selected period.</td></tr>
               ) : (
-                items.map(item => (
+                filteredItems.map(item => (
                   <tr key={item.load_id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-2.5 font-medium">
+                    <td className="px-3 py-2 text-gray-500">{item.date ? new Date(item.date).toLocaleDateString('en-CA') : '-'}</td>
+                    <td className="px-3 py-2 font-medium">
                       <Link to={`/order/${item.load_id}`} className="text-blue-600 hover:underline">{item.load_number}</Link>
                     </td>
-                    <td className="px-4 py-2.5 text-gray-600">{item.period}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-3 py-2">
                       {item.customer_id ? (
                         <Link to={`/partner/${item.customer_id}`} className="text-blue-600 hover:underline">{item.customer_name}</Link>
                       ) : item.customer_name}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-3 py-2">
                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 capitalize">{item.status}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right text-emerald-700">{item.revenue.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right text-rose-700">{item.cost.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right text-blue-700">{item.profit.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right">{item.margin != null ? `${item.margin}%` : '–'}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <Link to={`/order/${item.load_id}`} className="text-xs text-blue-600 hover:underline">View</Link>
+                    <td className="px-3 py-2 text-right text-emerald-700">${item.revenue.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right text-rose-700">${item.cost.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right text-blue-700">${item.profit.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right">{item.margin != null ? `${item.margin}%` : '–'}</td>
+                    <td className="px-3 py-2">
+                      <Link to={`/order/${item.load_id}`} className="text-blue-500 hover:underline">View</Link>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+          {/* Summary footer */}
+          {filteredItems.length > 0 && (
+            <div className="border-t px-4 py-2 bg-gray-50 flex gap-6 text-xs text-gray-600">
+              <span>Total Loads: <strong>{filteredItems.length}</strong></span>
+              <span>Revenue: <strong className="text-emerald-700">${totals.revenue.toLocaleString()}</strong></span>
+              <span>Expense: <strong className="text-rose-700">${totals.cost.toLocaleString()}</strong></span>
+              <span>Profit: <strong className="text-blue-700">${totals.profit.toLocaleString()}</strong></span>
+            </div>
+          )}
         </div>
       )}
+
+      <div className="text-right mt-2">
+        <Link to="/profit/expense-detail" className="text-xs text-blue-600 hover:underline">View Expense Detail →</Link>
+      </div>
     </div>
   )
 }

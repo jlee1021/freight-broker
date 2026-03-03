@@ -94,85 +94,74 @@ export default function OsdPage() {
   const f = (k: keyof typeof emptyForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm(p => ({ ...p, [k]: e.target.value }))
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="page-title">OSD (Overages, Shortages, Damages)</h1>
-        <button onClick={openAdd} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">+ Add New</button>
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-gray-800">OSD</h1>
+        <button onClick={openAdd} className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">+ New</button>
       </div>
 
-      {/* 필터 */}
-      <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="text-xs text-gray-500 block mb-0.5">OSD Type</label>
-          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="border rounded px-2 py-1.5 text-sm">
-            <option value="">All Types</option>
-            {OSD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs text-gray-500 block mb-0.5">Ship Date From</label>
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="border rounded px-2 py-1.5" />
-        </div>
-        <div>
-          <label className="text-xs text-gray-500 block mb-0.5">Ship Date To</label>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="border rounded px-2 py-1.5" />
-        </div>
+      {/* 필터 바 */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <input placeholder="Search Load..." className="border rounded px-3 py-1.5 text-sm w-40" onChange={() => {}} />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="border rounded px-2 py-1.5 text-sm">
+          <option value="">All Types</option>
+          {OSD_TYPES.map(t => <option key={t} value={t} className="capitalize">{t}</option>)}
+        </select>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border rounded px-2 py-1.5 text-sm">
+          {STATUS_TABS.map(s => <option key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s}</option>)}
+        </select>
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="border rounded px-2 py-1.5 text-sm" />
+        <span className="text-gray-400 text-sm">~</span>
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="border rounded px-2 py-1.5 text-sm" />
         <button onClick={load} className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm">Apply</button>
-        <button onClick={() => { setTypeFilter(''); setDateFrom(''); setDateTo(''); setStatusFilter('all') }} className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded text-sm">Clear</button>
-      </div>
-
-      {/* 상태 탭 */}
-      <div className="flex gap-2 flex-wrap">
-        {STATUS_TABS.map(s => (
-          <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded text-sm capitalize ${statusFilter === s ? 'bg-red-600 text-white' : 'bg-white border'}`}>{s}</button>
-        ))}
+        <button onClick={() => { setTypeFilter(''); setDateFrom(''); setDateTo(''); setStatusFilter('all') }} className="px-4 py-1.5 border rounded text-sm hover:bg-gray-50">Clear</button>
       </div>
 
       {loading ? <div className="text-gray-500 p-4">Loading...</div> : (
-        <div className="card overflow-x-auto">
-          <table className="min-w-full text-sm whitespace-nowrap">
-            <thead className="table-header">
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="min-w-full text-xs whitespace-nowrap">
+            <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-3 py-2 text-left">Ref#</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-left">Type</th>
-                <th className="px-3 py-2 text-left">Load</th>
-                <th className="px-3 py-2 text-left">Customer</th>
-                <th className="px-3 py-2 text-left">Shipper</th>
-                <th className="px-3 py-2 text-left">Carrier</th>
-                <th className="px-3 py-2 text-right">Amount</th>
-                <th className="px-3 py-2 text-right">AR Amount</th>
-                <th className="px-3 py-2 text-right">AP Amount</th>
-                <th className="px-3 py-2 text-left">Ship Date</th>
-                <th className="px-3 py-2 text-left">Delivery Date</th>
-                <th className="px-3 py-2 text-left">Due Date</th>
-                <th className="px-3 py-2 text-left">Expired</th>
-                <th className="px-3 py-2 text-left">Company</th>
-                <th className="px-3 py-2 text-left">Actions</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600 w-8">#</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Load</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Date</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Ref. #</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-600">Amount</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Customer</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Shipper</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Carrier</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Expired Cargo</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Company Name</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-600">AR</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-600">AP</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Due Date</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Status</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Action</th>
               </tr>
             </thead>
             <tbody>
-              {items.length === 0 ? <tr><td colSpan={16} className="px-4 py-6 text-center text-gray-500">No OSD records.</td></tr> : (
-                items.map(o => (
+              {items.length === 0 ? <tr><td colSpan={15} className="px-4 py-6 text-center text-gray-500">No OSD records.</td></tr> : (
+                items.map((o, idx) => (
                   <tr key={o.id} className="border-t hover:bg-gray-50">
-                    <td className="px-3 py-2">{o.ref_number ?? '–'}</td>
-                    <td className="px-3 py-2"><span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${STATUS_COLORS[o.status] || 'bg-gray-100 text-gray-700'}`}>{o.status}</span></td>
-                    <td className="px-3 py-2 capitalize">{o.osd_type ?? '–'}</td>
+                    <td className="px-3 py-2 text-gray-400">{idx + 1}</td>
                     <td className="px-3 py-2">{o.load_id ? <Link to={`/order/${o.load_id}`} className="text-blue-600 hover:underline">{o.load_number ?? o.load_id.slice(0, 8)}</Link> : '–'}</td>
+                    <td className="px-3 py-2">{o.ship_date ?? '–'}</td>
+                    <td className="px-3 py-2">{o.ref_number ?? '–'}</td>
+                    <td className="px-3 py-2 text-right">{o.amount != null ? `$${o.amount.toLocaleString()}` : '–'}</td>
                     <td className="px-3 py-2">{o.customer_id ? <Link to={`/partner/${o.customer_id}`} className="text-blue-600 hover:underline">{o.customer_name ?? '–'}</Link> : (o.customer_name ?? '–')}</td>
                     <td className="px-3 py-2">{o.shipper_name ?? '–'}</td>
                     <td className="px-3 py-2">{o.carrier_id ? <Link to={`/partner/${o.carrier_id}`} className="text-blue-600 hover:underline">{o.carrier_name ?? '–'}</Link> : (o.carrier_name ?? '–')}</td>
-                    <td className="px-3 py-2 text-right">{o.amount != null ? o.amount.toLocaleString() : '–'}</td>
-                    <td className="px-3 py-2 text-right">{o.ar_amount != null ? o.ar_amount.toLocaleString() : '–'}</td>
-                    <td className="px-3 py-2 text-right">{o.ap_amount != null ? o.ap_amount.toLocaleString() : '–'}</td>
-                    <td className="px-3 py-2">{o.ship_date ?? '–'}</td>
-                    <td className="px-3 py-2">{o.delivery_date ?? '–'}</td>
-                    <td className="px-3 py-2">{o.due_date ?? '–'}</td>
                     <td className="px-3 py-2">{o.expired_cargo ? <span className="text-red-600 font-medium">Yes</span> : 'No'}</td>
                     <td className="px-3 py-2">{o.company_name ?? '–'}</td>
-                    <td className="px-3 py-2 flex gap-2">
-                      <button onClick={() => openEdit(o)} className="text-blue-600 hover:underline text-xs">Edit</button>
-                      <button onClick={() => del(o.id)} className="text-red-500 hover:underline text-xs">Del</button>
+                    <td className="px-3 py-2 text-right">{o.ar_amount != null ? `$${o.ar_amount.toLocaleString()}` : '–'}</td>
+                    <td className="px-3 py-2 text-right">{o.ap_amount != null ? `$${o.ap_amount.toLocaleString()}` : '–'}</td>
+                    <td className="px-3 py-2">{o.due_date ?? '–'}</td>
+                    <td className="px-3 py-2"><span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${STATUS_COLORS[o.status] || 'bg-gray-100 text-gray-700'}`}>{o.status}</span></td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-2">
+                        <button onClick={() => openEdit(o)} className="text-blue-500 hover:underline">Edit</button>
+                        <button onClick={() => del(o.id)} className="text-red-400 hover:underline">Del</button>
+                      </div>
                     </td>
                   </tr>
                 ))

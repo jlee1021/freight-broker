@@ -257,127 +257,205 @@ function TypeTab() {
   )
 }
 
-// ── Permission 탭 ─────────────────────────────────────────────────────
+// ── Permission 탭 (참조 이미지 기준 CRUD 매트릭스) ─────────────────
+const PERMISSION_MODULES: { section: string; items: string[] }[] = [
+  { section: 'Dispatch', items: ['Order', 'Consolidation', 'EDI', 'OSD'] },
+  { section: 'Partner', items: ['Customer', 'Location', 'Carrier', 'OEF'] },
+  { section: 'Account', items: ['AR', 'AP', 'Expense', 'Debit+Credit', 'Item+List'] },
+  { section: 'Inventory', items: ['List'] },
+  { section: 'Group', items: ['Default', 'Qty', 'Permission'] },
+]
+const PERM_ACTIONS = ['Read', 'Edit', 'Create'] as const
+type PermAction = typeof PERM_ACTIONS[number]
+type PermMatrix = Record<string, Record<PermAction, boolean>>
+
+function defaultMatrix(): PermMatrix {
+  const m: PermMatrix = {}
+  PERMISSION_MODULES.forEach(({ items }) => {
+    items.forEach(item => {
+      m[item] = { Read: false, Edit: false, Create: false }
+    })
+  })
+  return m
+}
+
 function PermissionTab() {
   const [perms, setPerms] = useState<Permission[]>([])
-  const [q, setQ] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Permission | null>(null)
-  const [form, setForm] = useState({ name: '', description: '', resource: '', action: '' })
+  const [formName, setFormName] = useState('')
+  const [formDesc, setFormDesc] = useState('')
+  const [matrix, setMatrix] = useState<PermMatrix>(defaultMatrix())
   const [saving, setSaving] = useState(false)
 
   const load = () => apiJson<Permission[]>('/master/permissions').then(setPerms).catch(() => {})
   useEffect(() => { load() }, [])
 
-  const filtered = perms.filter(p => !q || p.name.toLowerCase().includes(q.toLowerCase()))
+  // 저장된 퍼미션을 매트릭스로 복원
+  const buildMatrix = (name: string): PermMatrix => {
+    const m = defaultMatrix()
+    perms.filter(p => p.name === name).forEach(p => {
+      const resource = p.resource || ''
+      const action = (p.action || '') as PermAction
+      if (m[resource] && PERM_ACTIONS.includes(action as any)) {
+        m[resource][action] = !!p.is_active
+      }
+    })
+    return m
+  }
 
-  const openAdd = () => { setEditing(null); setForm({ name: '', description: '', resource: '', action: '' }); setShowModal(true) }
-  const openEdit = (p: Permission) => { setEditing(p); setForm({ name: p.name, description: p.description || '', resource: p.resource || '', action: p.action || '' }); setShowModal(true) }
+  const openAdd = () => {
+    setEditing(null); setFormName(''); setFormDesc(''); setMatrix(defaultMatrix()); setShowModal(true)
+  }
+  const openEdit = (p: Permission) => {
+    setEditing(p); setFormName(p.name); setFormDesc(p.description || '')
+    setMatrix(buildMatrix(p.name)); setShowModal(true)
+  }
+
+  const toggleCell = (resource: string, action: PermAction) => {
+    setMatrix(m => ({ ...m, [resource]: { ...m[resource], [action]: !m[resource][action] } }))
+  }
 
   const save = async () => {
-    if (!form.name.trim()) { alert('Permission name required'); return }
+    if (!formName.trim()) { alert('Permission Name is required'); return }
     setSaving(true)
     try {
-      if (editing) {
-        await apiFetch(`/master/permissions/${editing.id}`, { method: 'PATCH', body: JSON.stringify(form) })
-      } else {
-        await apiFetch('/master/permissions', { method: 'POST', body: JSON.stringify(form) })
-      }
+      // 기존 같은 이름 권한 삭제 후 재생성
+      const existing = perms.filter(p => p.name === formName)
+      await Promise.all(existing.map(p => apiFetch(`/master/permissions/${p.id}`, { method: 'DELETE' })))
+      // 체크된 항목만 생성
+      const creates: Promise<any>[] = []
+      PERMISSION_MODULES.forEach(({ items }) => {
+        items.forEach(resource => {
+          PERM_ACTIONS.forEach(action => {
+            if (matrix[resource]?.[action]) {
+              creates.push(apiFetch('/master/permissions', {
+                method: 'POST',
+                body: JSON.stringify({ name: formName, description: formDesc, resource, action: action.toLowerCase() }),
+              }))
+            }
+          })
+        })
+      })
+      await Promise.all(creates)
       setShowModal(false); load()
     } catch (e: any) { alert(e.message || 'Save failed') }
     setSaving(false)
   }
 
-  const del = async (id: string) => {
-    if (!confirm('Delete this permission?')) return
-    await apiFetch(`/master/permissions/${id}`, { method: 'DELETE' }); load()
+  const del = async (name: string) => {
+    if (!confirm(`Delete permission "${name}"?`)) return
+    const toDelete = perms.filter(p => p.name === name)
+    await Promise.all(toDelete.map(p => apiFetch(`/master/permissions/${p.id}`, { method: 'DELETE' })))
+    load()
   }
+
+  // 고유 퍼미션 이름 목록
+  const permNames = [...new Set(perms.map(p => p.name))]
 
   return (
     <div>
-      <div className="flex gap-2 mb-3">
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search permission..." className="border rounded px-3 py-1.5 text-sm flex-1" />
-        <button onClick={openAdd} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700">+ Add</button>
+      <div className="flex justify-end mb-3">
+        <button onClick={openAdd} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">+ Add</button>
       </div>
-      {/* CRUD 매트릭스 뷰 */}
-      {filtered.length > 0 && (() => {
-        const resources = [...new Set(filtered.map(p => p.resource).filter(Boolean))]
-        const actions = ['read', 'write', 'delete', 'manage']
-        if (resources.length > 0) {
-          return (
-            <div className="mb-4 overflow-x-auto">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">CRUD Matrix</h3>
-              <table className="text-xs border-collapse">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="border px-3 py-2 text-left w-36">Resource</th>
-                    {actions.map(a => <th key={a} className="border px-3 py-2 text-center capitalize w-20">{a}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {resources.map(res => (
-                    <tr key={res} className="hover:bg-gray-50">
-                      <td className="border px-3 py-1.5 font-medium">{res}</td>
-                      {actions.map(act => {
-                        const has = filtered.some(p => p.resource === res && p.action === act && p.is_active)
-                        return (
-                          <td key={act} className="border px-3 py-1.5 text-center">
-                            {has ? <span className="text-green-600 font-bold">✓</span> : <span className="text-gray-300">–</span>}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        }
-        return null
-      })()}
-
       <table className="w-full text-sm border-collapse">
-        <thead><tr className="bg-gray-50 text-left">
-          <th className="border px-3 py-2">Permission Name</th><th className="border px-3 py-2">Resource</th><th className="border px-3 py-2">Action</th>
-          <th className="border px-3 py-2">Description</th><th className="border px-3 py-2">Created</th><th className="border px-3 py-2">Action</th>
-        </tr></thead>
-        <tbody>{filtered.map(p => (
-          <tr key={p.id} className="hover:bg-gray-50">
-            <td className="border px-3 py-1.5 font-medium">{p.name}</td>
-            <td className="border px-3 py-1.5 text-xs">{p.resource}</td>
-            <td className="border px-3 py-1.5 text-xs">{p.action}</td>
-            <td className="border px-3 py-1.5 text-gray-500 text-xs">{p.description}</td>
-            <td className="border px-3 py-1.5 text-xs text-gray-400">{p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</td>
-            <td className="border px-3 py-1.5">
-              <button onClick={() => openEdit(p)} className="text-blue-600 hover:underline text-xs mr-2">Edit</button>
-              <button onClick={() => del(p.id)} className="text-red-500 hover:underline text-xs">Delete</button>
-            </td>
+        <thead>
+          <tr className="bg-gray-50 border-b">
+            <th className="px-3 py-2 text-left font-medium text-gray-600">Permission Name</th>
+            <th className="px-3 py-2 text-left font-medium text-gray-600">Description</th>
+            <th className="px-3 py-2 text-center font-medium text-gray-600">Read</th>
+            <th className="px-3 py-2 text-center font-medium text-gray-600">Edit</th>
+            <th className="px-3 py-2 text-center font-medium text-gray-600">Create</th>
+            <th className="px-3 py-2 text-left font-medium text-gray-600">Action</th>
           </tr>
-        ))}</tbody>
+        </thead>
+        <tbody>
+          {permNames.length === 0 ? (
+            <tr><td colSpan={6} className="px-3 py-6 text-center text-gray-400">No permissions. Click + Add to create one.</td></tr>
+          ) : permNames.map(name => {
+            const group = perms.filter(p => p.name === name)
+            const desc = group[0]?.description || ''
+            const hasRead = group.some(p => p.action === 'read' && p.is_active)
+            const hasEdit = group.some(p => p.action === 'edit' && p.is_active)
+            const hasCreate = group.some(p => p.action === 'create' && p.is_active)
+            return (
+              <tr key={name} className="border-t hover:bg-gray-50">
+                <td className="px-3 py-2 font-medium">{name}</td>
+                <td className="px-3 py-2 text-gray-500 text-xs">{desc}</td>
+                <td className="px-3 py-2 text-center">{hasRead ? <span className="text-green-600">✓</span> : <span className="text-gray-300">–</span>}</td>
+                <td className="px-3 py-2 text-center">{hasEdit ? <span className="text-green-600">✓</span> : <span className="text-gray-300">–</span>}</td>
+                <td className="px-3 py-2 text-center">{hasCreate ? <span className="text-green-600">✓</span> : <span className="text-gray-300">–</span>}</td>
+                <td className="px-3 py-2 flex gap-2">
+                  <button onClick={() => openEdit(group[0])} className="text-blue-600 hover:underline text-xs">Edit</button>
+                  <button onClick={() => del(name)} className="text-red-500 hover:underline text-xs">Delete</button>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
       </table>
+
       {showModal && (
-        <Modal title={editing ? 'Edit Permission' : 'Add Permission'} onClose={() => setShowModal(false)}>
-          <div className="space-y-3">
-            {[
-              { label: 'Permission Name *', key: 'name', placeholder: 'e.g. manage_loads' },
-              { label: 'Resource', key: 'resource', placeholder: 'e.g. loads' },
-              { label: 'Action', key: 'action', placeholder: 'e.g. read, write, delete' },
-            ].map(({ label, key, placeholder }) => (
-              <div key={key}>
-                <label className="text-sm text-gray-600 block mb-1">{label}</label>
-                <input value={(form as any)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder} className="w-full border rounded px-3 py-2 text-sm" />
-              </div>
-            ))}
-            <div>
-              <label className="text-sm text-gray-600 block mb-1">Description</label>
-              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="w-full border rounded px-3 py-2 text-sm" />
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="font-semibold text-lg">{editing ? 'Edit Permission' : 'Add Permission'}</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-700 text-xl font-bold">×</button>
             </div>
-            <div className="flex gap-2 justify-end pt-2">
+            <div className="p-4 flex gap-6">
+              {/* Left: Name + Description */}
+              <div className="w-56 shrink-0 space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">* Permission Name</label>
+                  <input value={formName} onChange={e => setFormName(e.target.value)} placeholder="Permission Name" className="w-full border rounded px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Description</label>
+                  <textarea value={formDesc} onChange={e => setFormDesc(e.target.value)} rows={4} placeholder="Description..." className="w-full border rounded px-3 py-2 text-sm" />
+                </div>
+              </div>
+              {/* Right: CRUD matrix */}
+              <div className="flex-1 overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border px-3 py-2 text-left w-32">Resource</th>
+                      {PERM_ACTIONS.map(a => <th key={a} className="border px-3 py-2 text-center w-16">{a}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {PERMISSION_MODULES.map(({ section, items }) => (
+                      <>
+                        <tr key={section} className="bg-gray-100">
+                          <td colSpan={4} className="border px-3 py-1 font-semibold text-gray-700 text-xs">• {section}</td>
+                        </tr>
+                        {items.map(item => (
+                          <tr key={item} className="hover:bg-blue-50">
+                            <td className="border px-3 py-1.5 text-gray-700">{item}</td>
+                            {PERM_ACTIONS.map(action => (
+                              <td key={action} className="border px-3 py-1.5 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={matrix[item]?.[action] ?? false}
+                                  onChange={() => toggleCell(item, action)}
+                                  className="rounded"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end p-4 border-t">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancel</button>
-              <button onClick={save} disabled={saving} className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+              <button onClick={save} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   )
