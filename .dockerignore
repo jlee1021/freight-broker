@@ -1,0 +1,12 @@
+# Railway Docker 빌드 시 제외 (빌드 속도·용량)
+.git
+.gitignore
+**/node_modules
+**/.env
+**/__pycache__
+**/*.pyc
+frontend/dist
+backend/static
+*.md
+.env*
+.cursor

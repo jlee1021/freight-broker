@@ -1,12 +1,11 @@
-// localhost/127.0.0.1 이외의 호스트(VM 서버 등)에서 접속 시 같은 호스트의 8000 포트로 직접 요청
-const _isRemote =
+// 로컬: 프록시 사용. 그 외(같은 호스트 배포 시 Railway 등): 같은 origin의 /api/v1 사용
+const _isLocal =
   typeof window !== 'undefined' &&
-  window.location.hostname !== 'localhost' &&
-  window.location.hostname !== '127.0.0.1'
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
 
-const API_BASE = _isRemote
-  ? `${window.location.protocol}//${window.location.hostname}:8000/api/v1`
-  : '/api/v1'
+const API_BASE = _isLocal
+  ? '/api/v1'
+  : `${window.location.origin}/api/v1`
 
 export function getToken(): string | null {
   return localStorage.getItem('token')

@@ -1,0 +1,12 @@
+# Railway 데모용: weasyprint 제외 (PDF 다운로드는 데모에서 비활성)
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+sqlalchemy==2.0.36
+alembic==1.14.0
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+python-jose[cryptography]==3.3.0
+bcrypt>=4.0.0
+python-multipart==0.0.17
+pydantic-settings==2.6.1
+apscheduler>=3.10.0

@@ -1,7 +1,9 @@
 import logging
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+from fastapi.staticfiles import StaticFiles
 
 from .core.config import get_settings
 from .core.database import SessionLocal
@@ -88,6 +90,8 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/")
-def root():
-    return {"message": "Freight Broker API", "docs": "/docs"}
+# 정적 파일이 없을 때만(로컬 개발 등) API 루트 메시지 노출
+if not (_static_dir.is_dir() and (_static_dir / "index.html").exists()):
+    @app.get("/")
+    def root():
+        return {"message": "Freight Broker API", "docs": "/docs"}
