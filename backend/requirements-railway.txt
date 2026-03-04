@@ -1,4 +1,4 @@
-# Railway 데모용: weasyprint 제외 (PDF 다운로드는 데모에서 비활성)
+# Railway용 (weasyprint 제외, PDF는 503 처리)
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
 sqlalchemy==2.0.36

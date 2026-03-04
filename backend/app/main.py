@@ -48,6 +48,12 @@ app.add_middleware(
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 
+# Railway 등: 빌드된 프론트가 static/에 있으면 / 에서 서빙 (항상 정의해 두고 조건에서만 사용)
+_static_dir = Path(__file__).resolve().parent.parent / "static"
+_has_static = _static_dir.is_dir() and (_static_dir / "index.html").exists()
+if _has_static:
+    app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="frontend")
+
 
 @app.on_event("startup")
 def start_scheduler():
@@ -90,8 +96,7 @@ def health():
     return {"status": "ok"}
 
 
-# 정적 파일이 없을 때만(로컬 개발 등) API 루트 메시지 노출
-if not (_static_dir.is_dir() and (_static_dir / "index.html").exists()):
+if not _has_static:
     @app.get("/")
     def root():
         return {"message": "Freight Broker API", "docs": "/docs"}

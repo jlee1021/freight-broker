@@ -1,11 +1,8 @@
-// 로컬: 프록시 사용. 그 외(같은 호스트 배포 시 Railway 등): 같은 origin의 /api/v1 사용
+// 로컬: 프록시 /api/v1. Railway 등 단일 도메인 배포: 같은 origin /api/v1
 const _isLocal =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-
-const API_BASE = _isLocal
-  ? '/api/v1'
-  : `${window.location.origin}/api/v1`
+const API_BASE = _isLocal ? '/api/v1' : `${window.location.origin}/api/v1`
 
 export function getToken(): string | null {
   return localStorage.getItem('token')
