@@ -56,10 +56,9 @@ Railway 무료 플랜(월 $1 크레딧)으로 짧게 쓸 수 있습니다.
 ### 5.1 빌드/시작 설정
 
 - **Root Directory**: 비움 (저장소 루트).
-- **Builder**: **Dockerfile** 로 선택 (Nixpacks 말고 Docker 빌드 사용).
-- **Dockerfile Path**: **`Dockerfile.railway`** 입력.  
-  (루트에 `Dockerfile`이 없어도, `Dockerfile.railway`를 쓰려면 이 경로를 꼭 지정해야 합니다.)
-- **Build Command** / **Start Command**: 비움 (Dockerfile에서 처리).
+- 저장소 **루트에 `Dockerfile`** 이 있으면 Railway가 자동으로 Docker 빌드를 사용합니다 (Railpack 대신).  
+  별도로 Builder를 고르거나 Dockerfile Path를 넣을 필요 없습니다.
+- 만약 **Railpack**으로 빌드된다면: 서비스 **Variables**에 `RAILWAY_DOCKERFILE_PATH=Dockerfile` 추가 후 재배포.
 - **Start Command**: 비움 (Dockerfile의 `CMD` 사용).
 - **Watch Paths**: 비움.
 
